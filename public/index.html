@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>후던챗 | 치지직 채팅 추리</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  background:#080808;
+  color:#f5f5f5;
+  font-family:"Malgun Gothic","Noto Sans KR",Arial,sans-serif;
+}
+
+button{
+  font-family:inherit;
+  cursor:pointer;
+}
+
+.hidden{
+  display:none!important;
+}
+
+/* 전체 */
+
+.page{
+  width:100%;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 50% -20%,#252525 0,#080808 45%);
+}
+
+/* 상단 */
+
+.header{
+  height:70px;
+  border-bottom:1px solid #292929;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  position:sticky;
+  top:0;
+  background:rgba(8,8,8,.92);
+  backdrop-filter:blur(10px);
+  z-index:10;
+}
+
+.logo{
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:-1px;
+}
+
+.logo span{
+  color:#00d564;
+}
+
+.header-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.header-status{
+  font-size:12px;
+  color:#777;
+}
+
+.login-small{
+  border:1px solid #444;
+  background:#111;
+  color:#fff;
+  padding:9px 14px;
+  border-radius:5px;
+}
+
+/* 메인 */
+
+.container{
+  width:min(1100px,calc(100% - 32px));
+  margin:auto;
+  padding:70px 0;
+}
+
+/* 히어로 */
+
+.hero{
+  text-align:center;
+  padding:50px 0 70px;
+}
+
+.hero-small{
+  color:#00d564;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:3px;
+  margin-bottom:18px;
+}
+
+.hero h1{
+  margin:0;
+  font-size:clamp(48px,9vw,92px);
+  line-height:.95;
+  letter-spacing:-6px;
+  font-weight:950;
+}
+
+.hero h1 span{
+  color:#00d564;
+}
+
+.hero p{
+  margin:25px auto 0;
+  color:#999;
+  max-width:570px;
+  line-height:1.8;
+  font-size:14px;
+}
+
+/* 사건 시작 버튼 */
+
+.main-button{
+  margin-top:30px;
+  border:0;
+  background:#00d564;
+  color:#06100a;
+  font-size:16px;
+  font-weight:900;
+  padding:17px 38px;
+  border-radius:5px;
+}
+
+.main-button:hover{
+  background:#20ee80;
+}
+
+.main-button:disabled{
+  opacity:.5;
+}
+
+/* 카드 */
+
+.card{
+  border:1px solid #292929;
+  background:#0e0e0e;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+.card-head{
+  border-bottom:1px solid #292929;
+  padding:17px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.card-title{
+  font-size:13px;
+  font-weight:900;
+}
+
+.card-sub{
+  color:#666;
+  font-size:11px;
+}
+
+.card-body{
+  padding:20px;
+}
+
+/* 채널 */
+
+.channel{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:20px;
+  align-items:center;
+}
+
+.channel-name{
+  font-size:18px;
+  font-weight:900;
+}
+
+.channel-info{
+  color:#777;
+  font-size:12px;
+  margin-top:6px;
+}
+
+.login-button{
+  border:1px solid #00d564;
+  background:#00d564;
+  color:#071009;
+  padding:13px 20px;
+  border-radius:5px;
+  font-weight:900;
+}
+
+/* 사건 카드 */
+
+.section{
+  margin-top:25px;
+}
+
+.section-title{
+  margin:0 0 12px;
+  font-size:12px;
+  color:#777;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.modes{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+
+.mode{
+  min-height:130px;
+  padding:18px;
+  border:1px solid #292929;
+  background:#0d0d0d;
+  border-radius:7px;
+  transition:.15s;
+}
+
+.mode:hover{
+  border-color:#555;
+  transform:translateY(-2px);
+}
+
+.mode.active{
+  border-color:#00d564;
+  box-shadow:0 0 0 1px #00d564 inset;
+}
+
+.mode-number{
+  color:#00d564;
+  font-size:11px;
+  font-weight:900;
+}
+
+.mode h3{
+  margin:22px 0 7px;
+  font-size:17px;
+}
+
+.mode p{
+  margin:0;
+  color:#777;
+  font-size:11px;
+  line-height:1.6;
+}
+
+/* 채팅 */
+
+.live-control{
+  display:flex;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.live-button{
+  flex:1;
+  border:1px solid #333;
+  background:#151515;
+  color:#eee;
+  padding:13px;
+  border-radius:5px;
+  font-weight:800;
+}
+
+.live-button:hover{
+  background:#202020;
+}
+
+.live-button.start{
+  border-color:#00d564;
+}
+
+.chat-status{
+  color:#777;
+  font-size:11px;
+  margin-bottom:10px;
+}
+
+.chatlog{
+  height:240px;
+  overflow-y:auto;
+  background:#080808;
+  border:1px solid #222;
+  border-radius:5px;
+  padding:12px;
+}
+
+.chat-row{
+  font-size:12px;
+  line-height:1.8;
+  border-bottom:1px solid #151515;
+}
+
+.chat-name{
+  color:#00d564;
+  font-weight:900;
+  margin-right:7px;
+}
+
+.chat-content{
+  color:#ccc;
+}
+
+/* 게임 */
+
+.game{
+  padding-top:35px;
+}
+
+.game-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.tag{
+  display:inline-block;
+  border:1px solid #444;
+  padding:7px 10px;
+  border-radius:4px;
+  color:#aaa;
+  font-size:10px;
+  font-weight:900;
+}
+
+.game-title{
+  font-size:42px;
+  margin:0;
+  letter-spacing:-2px;
+}
+
+.brief{
+  color:#888;
+  font-size:13px;
+  line-height:1.8;
+  margin:12px 0 25px;
+}
+
+/* 증거 */
+
+.evidence-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.evidence{
+  min-height:150px;
+  border:1px solid #292929;
+  background:#101010;
+  padding:20px;
+  border-radius:6px;
+}
+
+.evidence-number{
+  color:#00d564;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.evidence-text{
+  margin-top:18px;
+  color:#ddd;
+  font-size:13px;
+  line-height:1.8;
+}
+
+/* 용의자 */
+
+.suspect-title{
+  margin:28px 0 12px;
+  font-size:12px;
+  color:#777;
+  letter-spacing:2px;
+  font-weight:900;
+}
+
+.suspects{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+
+.suspect{
+  border:1px solid #333;
+  background:#111;
+  color:#eee;
+  padding:18px 10px;
+  border-radius:5px;
+  font-weight:900;
+  text-align:center;
+}
+
+.suspect:hover{
+  border-color:#00d564;
+}
+
+.suspect.correct{
+  background:#10351f;
+  border-color:#00d564;
+  color:#70ffad;
+}
+
+.suspect.wrong{
+  background:#351414;
+  border-color:#ff5b5b;
+  color:#ff9292;
+}
+
+/* 결과 */
+
+.result{
+  margin-top:15px;
+  padding:20px;
+  border:1px solid #333;
+  background:#101010;
+  border-radius:6px;
+  font-size:13px;
+  line-height:1.8;
+}
+
+.result-success{
+  border-color:#00d564;
+}
+
+.result-fail{
+  border-color:#ff5b5b;
+}
+
+.back{
+  width:100%;
+  margin-top:12px;
+  padding:15px;
+  background:#111;
+  border:1px solid #333;
+  color:#eee;
+  border-radius:5px;
+}
+
+/* 안내 */
+
+.notice{
+  text-align:center;
+  color:#555;
+  font-size:10px;
+  line-height:1.7;
+  margin-top:25px;
+}
+
+/* 모바일 */
+
+@media(max-width:800px){
+
+  .modes{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .suspects{
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(max-width:600px){
+
+  .header{
+    padding:0 15px;
+  }
+
+  .header-status{
+    display:none;
+  }
+
+  .container{
+    width:calc(100% - 24px);
+    padding:35px 0;
+  }
+
+  .hero{
+    padding:35px 0 45px;
+  }
+
+  .hero h1{
+    font-size:52px;
+    letter-spacing:-4px;
+  }
+
+  .modes,
+  .evidence-grid{
+    grid-template-columns:1fr;
+  }
+
+  .channel{
+    grid-template-columns:1fr;
+  }
+
+  .suspects{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .game-title{
+    font-size:34px;
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<div class="page">
+
+<header class="header">
+
+  <div class="logo">
+    후던<span>챗</span>
+  </div>
+
+  <div class="header-right">
+    <div id="headerStatus" class="header-status">
+      채널 연결 안 됨
+    </div>
+
+    <button id="loginTop" class="login-small">
+      로그인
+    </button>
+  </div>
+
+</header>
+
+
+<main class="container">
+
+
+<!-- =========================
+     홈
+========================= -->
+
+<section id="home">
+
+  <div class="hero">
+
+    <div class="hero-small">
+      치지직 채팅 추리 게임
+    </div>
+
+    <h1>
+      범인은<br>
+      <span>누구인가?</span>
+    </h1>
+
+    <p>
+      방송 채팅 속에 숨겨진 단서를 찾아라.<br>
+      시청자들의 대화가 하나의 사건이 됩니다.
+    </p>
+
+    <button id="heroStart" class="main-button">
+      사건 수사 시작
+    </button>
+
+  </div>
+
+
+  <!-- 채널 -->
+
+  <div class="card">
+
+    <div class="card-head">
+      <div class="card-title">
+        수사 대상 채널
+      </div>
+
+      <div class="card-sub">
+        치지직 연결
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      <div class="channel">
+
+        <div>
+
+          <div id="channelName" class="channel-name">
+            치지직 채널을 연결해주세요
+          </div>
+
+          <div id="channelInfo" class="channel-info">
+            로그인하면 본인 방송의 실시간 채팅을 수집할 수 있습니다.
+          </div>
+
+        </div>
+
+        <button id="login" class="login-button">
+          치지직 로그인
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- 모드 -->
+
+  <div class="section">
+
+    <div class="section-title">
+      사건 선택
+    </div>
+
+    <div class="modes">
+
+      <div class="mode active">
+        <div class="mode-number">01</div>
+        <h3>오늘의 사건</h3>
+        <p>
+          채팅에서 하나의 사건을 발견합니다.
+        </p>
+      </div>
+
+      <div class="mode">
+        <div class="mode-number">02</div>
+        <h3>미제 사건</h3>
+        <p>
+          여러 단서를 모아 사건을 해결합니다.
+        </p>
+      </div>
+
+      <div class="mode">
+        <div class="mode-number">03</div>
+        <h3>장기 수사</h3>
+        <p>
+          제한 없이 천천히 추리합니다.
+        </p>
+      </div>
+
+      <div class="mode">
+        <div class="mode-number">04</div>
+        <h3>야간 수사</h3>
+        <p>
+          끝없이 이어지는 채팅 추리입니다.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- 채팅 -->
+
+  <div class="section">
+
+    <div class="section-title">
+      실시간 채팅
+    </div>
+
+    <div class="card">
+
+      <div class="card-head">
+
+        <div class="card-title">
+          방송 채팅 기록
+        </div>
+
+        <div id="chatCount" class="card-sub">
+          채팅 0개
+        </div>
+
+      </div>
+
+      <div class="card-body">
+
+        <div class="live-control">
+
+          <button id="start" class="live-button start">
+            채팅 수집 시작
+          </button>
+
+          <button id="stop" class="live-button">
+            수집 중지
+          </button>
+
+        </div>
+
+        <div id="liveStatus" class="chat-status">
+          로그인 후 채팅 수집을 시작해주세요.
+        </div>
+
+        <div id="chatlog" class="chatlog">
+          <div style="color:#555;font-size:12px;">
+            아직 수집된 채팅이 없습니다.
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <button id="open" class="main-button" style="width:100%;">
+    채팅으로 사건 만들기
+  </button>
+
+
+  <div class="notice">
+    후던챗의 사건은 실제 인물을 범죄자로 지목하지 않는<br>
+    허구의 추리 게임 콘텐츠입니다.
+  </div>
+
+</section>
+
+
+<!-- =========================
+     게임
+========================= -->
+
+<section id="game" class="game hidden">
+
+  <div class="game-top">
+
+    <span class="tag">
+      최고 수배 사건
+    </span>
+
+    <span id="count" class="tag">
+      용의자 0명
+    </span>
+
+  </div>
+
+
+  <h1 class="game-title">
+    범인은 누구인가?
+  </h1>
+
+  <p id="brief" class="brief">
+    사건을 분석하고 있습니다.
+  </p>
+
+
+  <div class="section-title">
+    확보된 증거
+  </div>
+
+  <div id="exhibits" class="evidence-grid">
+  </div>
+
+
+  <div class="suspect-title">
+    용의자 선택
+  </div>
+
+  <div id="choices" class="suspects">
+  </div>
+
+
+  <div id="result" class="result hidden">
+  </div>
+
+
+  <button id="back" class="back">
+    사건 목록으로 돌아가기
+  </button>
+
+</section>
+
+</main>
+
+</div>
+
+
+<script>
+
+/* 날짜가 필요한 경우를 위한 현재 날짜 */
+
+let messages = [];
+let polling = null;
+
+
+/* 로그인 버튼 */
+
+document.getElementById("login").onclick = () => {
+  location.href = "/auth/login";
+};
+
+document.getElementById("loginTop").onclick = () => {
+  location.href = "/auth/login";
+};
+
+
+/* 로그인 상태 확인 */
+
+async function checkLogin(){
+
+  try{
+
+    const response =
+      await fetch("/api/me");
+
+    const data =
+      await response.json();
+
+    if(data.loggedIn){
+
+      document.getElementById("login").textContent =
+        "치지직 연결됨";
+
+      document.getElementById("login").disabled = true;
+
+      document.getElementById("loginTop").textContent =
+        "연결됨";
+
+      document.getElementById("loginTop").disabled = true;
+
+      document.getElementById("headerStatus").textContent =
+        "채널 연결됨";
+
+      document.getElementById("channelName").textContent =
+        data.me.channelName;
+
+      document.getElementById("channelInfo").textContent =
+        "실시간 방송 채팅을 수집할 준비가 되었습니다.";
+
+    }
+
+  }catch(error){
+
+    console.error(error);
+
+  }
+
+}
+
+checkLogin();
+
+
+/* 메인 시작 버튼 */
+
+document.getElementById("heroStart").onclick = () => {
+
+  document.getElementById("start").scrollIntoView({
+    behavior:"smooth",
+    block:"center"
+  });
+
+};
+
+
+/* 채팅 수집 시작 */
+
+document.getElementById("start").onclick =
+async () => {
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/live/start",
+        {
+          method:"POST"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(!response.ok){
+
+      alert(
+        data.error ||
+        "채팅 수집을 시작할 수 없습니다."
+      );
+
+      return;
+
+    }
+
+
+    document.getElementById("liveStatus").textContent =
+      "실시간 채팅을 수집하고 있습니다.";
+
+    if(polling){
+      clearInterval(polling);
+    }
+
+    polling =
+      setInterval(loadMessages,1000);
+
+    loadMessages();
+
+  }catch(error){
+
+    alert(
+      "서버에 연결할 수 없습니다."
+    );
+
+  }
+
+};
+
+
+/* 채팅 수집 중지 */
+
+document.getElementById("stop").onclick =
+async () => {
+
+  try{
+
+    await fetch(
+      "/api/live/stop",
+      {
+        method:"POST"
+      }
+    );
+
+  }catch(error){
+
+    console.error(error);
+
+  }
+
+
+  if(polling){
+
+    clearInterval(polling);
+    polling = null;
+
+  }
+
+
+  document.getElementById("liveStatus").textContent =
+    "채팅 수집을 중지했습니다.";
+
+};
+
+
+/* 채팅 불러오기 */
+
+async function loadMessages(){
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/live/messages"
+      );
+
+    const data =
+      await response.json();
+
+    messages =
+      data.messages || [];
+
+
+    document.getElementById("chatCount").textContent =
+      `채팅 ${messages.length}개`;
+
+
+    const chatlog =
+      document.getElementById("chatlog");
+
+
+    if(messages.length === 0){
+
+      chatlog.innerHTML =
+        `<div style="color:#555;font-size:12px;">
+          아직 수집된 채팅이 없습니다.
+        </div>`;
+
+      return;
+
+    }
+
+
+    chatlog.innerHTML =
+
+      messages
+      .slice(-100)
+      .map(message => {
+
+        return `
+          <div class="chat-row">
+
+            <span class="chat-name">
+              ${escapeHtml(message.nickname)}
+            </span>
+
+            <span class="chat-content">
+              ${escapeHtml(message.content)}
+            </span>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+
+    chatlog.scrollTop =
+      chatlog.scrollHeight;
+
+
+  }catch(error){
+
+    console.error(error);
+
+  }
+
+}
+
+
+/* 사건 생성 */
+
+document.getElementById("open").onclick =
+async () => {
+
+  if(messages.length < 3){
+
+    alert(
+      "채팅이 최소 3개 이상 필요합니다."
+    );
+
+    return;
+
+  }
+
+
+  const button =
+    document.getElementById("open");
+
+  button.disabled = true;
+
+  button.textContent =
+    "사건을 분석하고 있습니다...";
+
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/case",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              messages:messages
+            })
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if(!response.ok){
+
+      alert(
+        data.error ||
+        "사건 생성에 실패했습니다."
+      );
+
+      return;
+
+    }
+
+
+    renderCase(data);
+
+
+    document
+      .getElementById("home")
+      .classList
+      .add("hidden");
+
+
+    document
+      .getElementById("game")
+      .classList
+      .remove("hidden");
+
+
+    window.scrollTo({
+      top:0,
+      behavior:"smooth"
+    });
+
+
+  }catch(error){
+
+    console.error(error);
+
+    alert(
+      "사건을 생성하는 중 오류가 발생했습니다."
+    );
+
+  }finally{
+
+    button.disabled = false;
+
+    button.textContent =
+      "채팅으로 사건 만들기";
+
+  }
+
+};
+
+
+/* 사건 표시 */
+
+function renderCase(data){
+
+  const suspects =
+    data.suspects || [];
+
+
+  document.getElementById("count").textContent =
+    `용의자 ${suspects.length}명`;
+
+
+  document.getElementById("brief").textContent =
+    data.brief ||
+    "확보된 증거를 검토하고 범인을 찾아보세요.";
+
+
+  /* 증거 */
+
+  document.getElementById("exhibits").innerHTML =
+
+    (data.exhibits || [])
+    .slice(0,6)
+    .map((item,index) => {
+
+      return `
+        <div class="evidence">
+
+          <div class="evidence-number">
+            증거 ${String(index+1).padStart(2,"0")}
+          </div>
+
+          <div class="evidence-text">
+            ${escapeHtml(item.text)}
+          </div>
+
+        </div>
+      `;
+
+    })
+    .join("");
+
+
+  /* 용의자 */
+
+  document.getElementById("choices").innerHTML =
+
+    suspects
+    .map(name => {
+
+      return `
+        <button
+          class="suspect"
+          data-name="${escapeHtml(name)}"
+        >
+          ${escapeHtml(name)}
+        </button>
+      `;
+
+    })
+    .join("");
+
+
+  document
+  .querySelectorAll(".suspect")
+  .forEach(button => {
+
+    button.onclick = () => {
+
+      const selected =
+        button.dataset.name;
+
+      const correct =
+        selected === data.suspect;
+
+
+      document
+      .querySelectorAll(".suspect")
+      .forEach(item => {
+
+        item.classList.remove(
+          "correct",
+          "wrong"
+        );
+
+      });
+
+
+      const result =
+        document.getElementById("result");
+
+
+      if(correct){
+
+        button.classList.add("correct");
+
+        result.className =
+          "result result-success";
+
+        result.innerHTML =
+          `
+            <strong>사건 해결!</strong>
+            <br>
+            정확하게 범인을 찾아냈습니다.
+          `;
+
+      }else{
+
+        button.classList.add("wrong");
+
+        result.className =
+          "result result-fail";
+
+        result.innerHTML =
+          `
+            <strong>잘못된 용의자입니다.</strong>
+            <br>
+            증거를 다시 살펴보세요.
+            <br><br>
+            정답은
+            <strong>
+              ${escapeHtml(data.suspect)}
+            </strong>
+            입니다.
+          `;
+
+      }
+
+    };
+
+  });
+
+}
+
+
+/* 뒤로가기 */
+
+document.getElementById("back").onclick = () => {
+
+  document
+    .getElementById("game")
+    .classList
+    .add("hidden");
+
+  document
+    .getElementById("home")
+    .classList
+    .remove("hidden");
+
+  document
+    .getElementById("result")
+    .classList
+    .add("hidden");
+
+  window.scrollTo({
+    top:0,
+    behavior:"smooth"
+  });
+
+};
+
+
+/* 특수문자 처리 */
+
+function escapeHtml(value){
+
+  return String(value ?? "")
+    .replace(
+      /[&<>"']/g,
+      character => {
+
+        const table = {
+          "&":"&amp;",
+          "<":"&lt;",
+          ">":"&gt;",
+          '"':"&quot;",
+          "'":"&#39;"
+        };
+
+        return table[character];
+
+      }
+    );
+
+}
+
+</script>
+
+</body>
+</html>
