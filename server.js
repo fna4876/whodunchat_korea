@@ -94,35 +94,27 @@ app.use(
    Session
 ========================================================= */
 
+app.set("trust proxy", 1);
+
 app.use(
   session({
-
     secret: SESSION_SECRET,
 
     resave: false,
 
     saveUninitialized: false,
 
-    proxy: true,
+    rolling: true,
 
     cookie: {
-
       httpOnly: true,
 
-      secure:
-        process.env.NODE_ENV === "production",
+      secure: true,
 
       sameSite: "lax",
 
-      maxAge:
-        1000 *
-        60 *
-        60 *
-        24 *
-        30
-
+      maxAge: 1000 * 60 * 60 * 24 * 30
     }
-
   })
 );
 
@@ -1748,32 +1740,27 @@ app.get(
    로그인 상태
 ========================================================= */
 
-app.get(
-  "/api/auth/status",
-  (
-    req,
-    res
-  ) => {
+app.get("/api/auth/status", (req, res) => {
+  const loggedIn = !!req.session?.accessToken;
 
-    res.json({
+  console.log("=================================");
+  console.log("🔎 로그인 상태 확인");
+  console.log("Session ID:", req.sessionID);
+  console.log("Access Token 존재:", !!req.session?.accessToken);
+  console.log("User 존재:", !!req.session?.user);
+  console.log("Channel ID:", req.session?.channelId || null);
+  console.log("=================================");
 
-      ok: true,
+  res.json({
+    ok: true,
 
-      loggedIn:
-        !!req.session?.accessToken,
+    loggedIn,
 
-      user:
-        req.session?.user ||
-        null,
+    user: req.session?.user || null,
 
-      channelId:
-        req.session?.channelId ||
-        null
-
-    });
-
-  }
-);
+    channelId: req.session?.channelId || null
+  });
+});
 
 
 /* =========================================================
