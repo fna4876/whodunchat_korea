@@ -723,6 +723,13 @@ button{
 
   </div>
 
+<button
+  id="history"
+  class="back"
+  style="margin-bottom:12px;"
+>
+  저장된 채팅 내역 불러오기
+</button>
 
   <button id="open" class="main-button" style="width:100%;">
     채팅으로 사건 만들기
@@ -1003,23 +1010,39 @@ async function loadMessages(){
 
       messages
       .slice(-100)
-      .map(message => {
+     .map(message => {
 
-        return `
-          <div class="chat-row">
+  const time =
+    message.timestamp
+      ? new Date(
+          Number(message.timestamp)
+        ).toLocaleString("ko-KR", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      : "";
 
-            <span class="chat-name">
-              ${escapeHtml(message.nickname)}
-            </span>
+  return `
+    <div class="chat-row">
 
-            <span class="chat-content">
-              ${escapeHtml(message.content)}
-            </span>
+      <span style="color:#555;font-size:10px;margin-right:8px;">
+        ${escapeHtml(time)}
+      </span>
 
-          </div>
-        `;
+      <span class="chat-name">
+        ${escapeHtml(message.nickname)}
+      </span>
 
-      })
+      <span class="chat-content">
+        ${escapeHtml(message.content)}
+      </span>
+
+    </div>
+  `;
+
+})
       .join("");
 
 
@@ -1036,21 +1059,11 @@ async function loadMessages(){
 }
 
 
-/* 사건 생성 */
+/* =========================================
+   저장된 채팅으로 사건 생성
+========================================= */
 
-document.getElementById("open").onclick =
-async () => {
-
-  if(messages.length < 3){
-
-    alert(
-      "채팅이 최소 3개 이상 필요합니다."
-    );
-
-    return;
-
-  }
-
+document.getElementById("open").onclick = async () => {
 
   const button =
     document.getElementById("open");
@@ -1058,26 +1071,127 @@ async () => {
   button.disabled = true;
 
   button.textContent =
-    "사건을 분석하고 있습니다...";
+    "저장된 채팅을 불러오는 중...";
 
 
-  try{
+  try {
+
+    /*
+     * 서버에 저장된 전체 채팅 가져오기
+     */
+
+    const historyResponse =
+      await fetch(
+        "/api/chat/history"
+      );
+
+
+    const historyData =
+      await historyResponse.json();
+
+
+    if (!historyResponse.ok) {
+
+      throw new Error(
+        historyData.error ||
+        "저장된 채팅을 불러오지 못했습니다."
+      );
+
+    }
+
+
+    const savedMessages =
+      historyData.messages || [];
+
+
+    /*
+     * 현재 화면의 채팅과
+     * 서버에 저장된 채팅 합치기
+     */
+
+    const mergedMessages = [
+      ...savedMessages,
+      ...messages
+    ];
+
+
+    /*
+     * 중복 제거
+     */
+
+    const uniqueMessages = [];
+
+    const seen = new Set();
+
+
+    for (const message of mergedMessages) {
+
+      const id =
+        message.id ||
+        [
+          message.timestamp,
+          message.nickname,
+          message.content
+        ].join("|");
+
+
+      if (seen.has(id)) {
+        continue;
+      }
+
+
+      seen.add(id);
+
+      uniqueMessages.push(message);
+
+    }
+
+
+    messages =
+      uniqueMessages;
+
+
+    /*
+     * 채팅이 너무 적으면 사건 생성하지 않음
+     */
+
+    if (messages.length < 3) {
+
+      alert(
+        "저장된 채팅이 최소 3개 이상 필요합니다."
+      );
+
+      return;
+
+    }
+
+
+    button.textContent =
+      "사건을 분석하고 있습니다...";
+
+
+    /*
+     * 저장된 전체 채팅을 AI 사건 생성기로 전달
+     */
 
     const response =
       await fetch(
         "/api/case",
         {
-          method:"POST",
+          method: "POST",
 
-          headers:{
+          headers: {
             "Content-Type":
               "application/json"
           },
 
-          body:
-            JSON.stringify({
-              messages:messages
-            })
+          body: JSON.stringify({
+
+            messages:
+              messages
+
+          })
+
         }
       );
 
@@ -1086,14 +1200,12 @@ async () => {
       await response.json();
 
 
-    if(!response.ok){
+    if (!response.ok) {
 
-      alert(
+      throw new Error(
         data.error ||
         "사건 생성에 실패했습니다."
       );
-
-      return;
 
     }
 
@@ -1114,20 +1226,26 @@ async () => {
 
 
     window.scrollTo({
-      top:0,
-      behavior:"smooth"
+      top: 0,
+      behavior: "smooth"
     });
 
 
-  }catch(error){
+  } catch (error) {
 
-    console.error(error);
+    console.error(
+      "사건 생성 오류:",
+      error
+    );
+
 
     alert(
+      error.message ||
       "사건을 생성하는 중 오류가 발생했습니다."
     );
 
-  }finally{
+
+  } finally {
 
     button.disabled = false;
 
@@ -1137,7 +1255,6 @@ async () => {
   }
 
 };
-
 
 /* 사건 표시 */
 
@@ -1324,6 +1441,154 @@ function escapeHtml(value){
     );
 
 }
+/* =========================================
+   저장된 채팅 내역 보기
+========================================= */
+
+document.getElementById("history").onclick =
+async () => {
+
+  const button =
+    document.getElementById("history");
+
+  try {
+
+    button.disabled = true;
+
+    button.textContent =
+      "채팅 내역을 불러오는 중...";
+
+
+    const response =
+      await fetch(
+        "/api/chat/history"
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "채팅 내역을 불러오지 못했습니다."
+      );
+
+    }
+
+
+    messages =
+      data.messages || [];
+
+
+    document.getElementById(
+      "chatCount"
+    ).textContent =
+      `채팅 ${messages.length}개`;
+
+
+    const chatlog =
+      document.getElementById(
+        "chatlog"
+      );
+
+
+    if (messages.length === 0) {
+
+      chatlog.innerHTML = `
+        <div style="color:#555;font-size:12px;">
+          저장된 채팅이 없습니다.
+        </div>
+      `;
+
+      return;
+
+    }
+
+
+    chatlog.innerHTML =
+
+    messages
+  .slice(-100)
+  .map(message => {
+
+    const time =
+      message.timestamp
+        ? new Date(
+            Number(message.timestamp)
+          ).toLocaleString("ko-KR", {
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+          })
+        : "";
+
+    return `
+      <div class="chat-row">
+
+        <span
+          style="
+            color:#555;
+            font-size:10px;
+            margin-right:8px;
+          "
+        >
+          ${escapeHtml(time)}
+        </span>
+
+        <span class="chat-name">
+          ${escapeHtml(
+            message.nickname
+          )}
+        </span>
+
+        <span class="chat-content">
+          ${escapeHtml(
+            message.content
+          )}
+        </span>
+
+      </div>
+    `;
+
+  })
+        .join("");
+
+
+    chatlog.scrollTop =
+      chatlog.scrollHeight;
+
+
+    document.getElementById(
+      "liveStatus"
+    ).textContent =
+      `저장된 채팅 ${messages.length}개를 불러왔습니다.`;
+
+  } catch (error) {
+
+    console.error(
+      "채팅 내역 조회 오류:",
+      error
+    );
+
+    alert(
+      error.message ||
+      "채팅 내역을 불러오지 못했습니다."
+    );
+
+  } finally {
+
+    button.disabled = false;
+
+    button.textContent =
+      "저장된 채팅 내역 불러오기";
+
+  }
+
+};
 
 </script>
 
