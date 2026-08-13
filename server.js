@@ -1312,108 +1312,112 @@ function stopLiveWatcher(
 
 
 /* =========================================
-   로그인
+   치지직 로그인
 ========================================= */
 
-app.get(
-  "/auth/login",
-  (req, res) => {
+app.get("/auth/login", (req, res) => {
 
-    try {
+  try {
 
-      if (!CHZZK_CLIENT_ID) {
-
-        return res.status(500).send(
-          "CHZZK_CLIENT_ID 환경변수가 없습니다."
-        );
-
-      }
-
-      if (!CHZZK_REDIRECT_URI) {
-
-        return res.status(500).send(
-          "CHZZK_REDIRECT_URI 환경변수가 없습니다."
-        );
-
-      }
-
-      /*
-       * OAuth 보안용 state 생성
-       */
-      const state =
-        crypto
-          .randomBytes(24)
-          .toString("hex");
-
-      req.session.oauthState =
-        state;
-
-      /*
-       * 치지직 OAuth 인증 주소
-       */
-      const params =
-        new URLSearchParams();
-
-      params.set(
-        "clientId",
-        CHZZK_CLIENT_ID
+    if (!CHZZK_CLIENT_ID) {
+      return res.status(500).send(
+        "CHZZK_CLIENT_ID가 설정되지 않았습니다."
       );
-
-      params.set(
-        "redirectUri",
-        CHZZK_REDIRECT_URI
-      );
-
-      params.set(
-        "state",
-        state
-      );
-
-      const authorizeUrl =
-        `${CHZZK_API}/oauth2/authorize?${params.toString()}`;
-
-      console.log("");
-      console.log(
-        "================================="
-      );
-      console.log(
-        "🔐 치지직 로그인 시작"
-      );
-      console.log(
-        "Client ID:",
-        CHZZK_CLIENT_ID
-      );
-      console.log(
-        "Redirect URI:",
-        CHZZK_REDIRECT_URI
-      );
-      console.log(
-        "OAuth URL:",
-        authorizeUrl
-      );
-      console.log(
-        "================================="
-      );
-
-      res.redirect(
-        authorizeUrl
-      );
-
-    } catch (error) {
-
-      console.error(
-        "로그인 URL 생성 오류:",
-        error
-      );
-
-      res.status(500).send(
-        `로그인 시작 실패: ${error.message}`
-      );
-
     }
 
+    if (!CHZZK_REDIRECT_URI) {
+      return res.status(500).send(
+        "CHZZK_REDIRECT_URI가 설정되지 않았습니다."
+      );
+    }
+
+
+    /*
+     * OAuth state 생성
+     */
+    const state =
+      crypto.randomBytes(32).toString("hex");
+
+    req.session.oauthState =
+      state;
+
+
+    /*
+     * 치지직 공식 인증 주소
+     *
+     * 중요:
+     * openapi.chzzk.naver.com ❌
+     * chzzk.naver.com/account-interlock ✅
+     */
+    const params =
+      new URLSearchParams({
+
+        clientId:
+          CHZZK_CLIENT_ID,
+
+        redirectUri:
+          CHZZK_REDIRECT_URI,
+
+        state
+
+      });
+
+
+    const oauthUrl =
+      `https://chzzk.naver.com/account-interlock?${params.toString()}`;
+
+
+    console.log("");
+    console.log(
+      "================================="
+    );
+
+    console.log(
+      "🔐 치지직 로그인 시작"
+    );
+
+    console.log(
+      "Client ID:",
+      CHZZK_CLIENT_ID
+    );
+
+    console.log(
+      "Redirect URI:",
+      CHZZK_REDIRECT_URI
+    );
+
+    console.log(
+      "OAuth URL:",
+      oauthUrl
+    );
+
+    console.log(
+      "================================="
+    );
+
+
+    /*
+     * 치지직 로그인 페이지로 이동
+     */
+    return res.redirect(
+      oauthUrl
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "치지직 로그인 시작 오류:",
+      error
+    );
+
+    return res.status(500).send(
+      `로그인 시작 실패: ${error.message}`
+    );
+
   }
-);
+
+});
 
 
 /* =========================================
@@ -1522,32 +1526,24 @@ app.get(
        * Access Token 요청
        */
       const body =
-        new URLSearchParams();
+  new URLSearchParams({
 
-      body.set(
-        "grant_type",
-        "authorization_code"
-      );
+    grantType:
+      "authorization_code",
 
-      body.set(
-        "client_id",
-        CHZZK_CLIENT_ID
-      );
+    clientId:
+      CHZZK_CLIENT_ID,
 
-      body.set(
-        "client_secret",
-        CHZZK_CLIENT_SECRET
-      );
+    clientSecret:
+      CHZZK_CLIENT_SECRET,
 
-      body.set(
-        "redirect_uri",
-        CHZZK_REDIRECT_URI
-      );
+    code:
+      String(code),
 
-      body.set(
-        "code",
-        String(code)
-      );
+    state:
+      String(state)
+
+  });
 
 
       const response =
