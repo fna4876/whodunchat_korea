@@ -928,67 +928,116 @@ async function getCurrentLive(channelId) {
 
   }
 
-  const response =
-    await fetch(
-      "https://openapi.chzzk.naver.com/open/v1/lives?size=20",
-      {
-        method: "GET",
+  let next = null;
 
-        headers: {
-          "Client-Id": clientId,
-          "Client-Secret": clientSecret
+  /*
+   * CHZZK 라이브 목록은 한 번에 최대 20개만 제공됨.
+   * next가 있으면 다음 페이지까지 계속 조회한다.
+   */
+
+  for (let page = 0; page < 20; page++) {
+
+    const params = new URLSearchParams({
+      size: "20"
+    });
+
+    if (next) {
+      params.set("next", next);
+    }
+
+    const response =
+      await fetch(
+        `https://openapi.chzzk.naver.com/open/v1/lives?${params.toString()}`,
+        {
+          method: "GET",
+
+          headers: {
+            "Client-Id": clientId,
+            "Client-Secret": clientSecret
+          }
         }
-      }
-    );
+      );
 
-  const text =
-    await response.text();
+    const text =
+      await response.text();
 
-  let data;
+    let data;
 
-  try {
+    try {
 
-    data = JSON.parse(text);
+      data =
+        JSON.parse(text);
 
-  } catch {
+    } catch {
 
-    throw new Error(
-      "CHZZK 라이브 API 응답이 JSON이 아닙니다."
-    );
+      throw new Error(
+        "CHZZK 라이브 API 응답이 JSON이 아닙니다."
+      );
+
+    }
+
+    if (!response.ok) {
+
+      throw new Error(
+        "CHZZK 방송 상태 조회 실패: " +
+        (
+          data.message ||
+          data.error ||
+          JSON.stringify(data)
+        )
+      );
+
+    }
+
+    const content =
+      data.content || data;
+
+    const lives =
+      Array.isArray(content.data)
+        ? content.data
+        : [];
+
+    /*
+     * 현재 페이지에서 내 방송 찾기
+     */
+
+    const found =
+      lives.find(
+        live =>
+          String(live.channelId) ===
+          String(channelId)
+      );
+
+    if (found) {
+
+      return found;
+
+    }
+
+    /*
+     * 다음 페이지 확인
+     */
+
+    next =
+      content.page?.next ||
+      null;
+
+    if (!next) {
+
+      break;
+
+    }
 
   }
 
-  if (!response.ok) {
+  /*
+   * 모든 페이지에서 찾지 못함
+   * → 현재 방송하지 않는 것으로 판단
+   */
 
-    throw new Error(
-      "CHZZK 방송 상태 조회 실패: " +
-      (
-        data.message ||
-        data.error ||
-        JSON.stringify(data)
-      )
-    );
-
-  }
-
-  const content =
-    data.content || data;
-
-  const lives =
-    Array.isArray(content.data)
-      ? content.data
-      : [];
-
-  return (
-    lives.find(
-      live =>
-        String(live.channelId) ===
-        String(channelId)
-    ) || null
-  );
+  return null;
 
 }
-
 
 /* =========================================
    방송 상태 확인
@@ -1289,27 +1338,6 @@ function stopLiveWatcher(channelId) {
    방송 상태 자동 감시
 ========================================= */
 
-async function checkBroadcastStatus() {
-
-  try {
-
-    /*
-     * 로그인한 채널이 있는 세션을 찾음
-     */
-
-    let targetChannelId = null;
-    let targetReq = null;
-
-    /*
-     * 현재 연결된 채널이 있다면 우선 사용
-     */
-
-    for (const [channelId] of chatConnections) {
-
-      targetChannelId = channelId;
-      break;
-
-    }
 
     /*
      * 아직 채팅 연결이 없다면
@@ -1820,6 +1848,113 @@ app.post(
 
 
 /* 저장된 채팅 가져오기 */
+/* =========================================
+   현재 방송 상태
+========================================= */
+
+app.get(
+  "/api/live/status",
+  async (req, res) => {
+
+    try {
+
+      if (!req.session.accessToken) {
+
+        return res.status(401).json({
+          loggedIn: false,
+          isLive: false,
+          collecting: false,
+          error: "로그인이 필요합니다."
+        });
+
+      }
+
+      const channelId =
+        req.session.channelId ||
+        req.session.userId;
+
+      if (!channelId) {
+
+        return res.status(400).json({
+          loggedIn: true,
+          isLive: false,
+          collecting: false,
+          error: "채널 ID를 확인할 수 없습니다."
+        });
+
+      }
+
+      /*
+       * 현재 방송 확인
+       */
+
+      const live =
+        await getCurrentLive(channelId);
+
+      const isLive =
+        !!live;
+
+      /*
+       * 현재 채팅 연결 상태
+       */
+
+      const connection =
+        chatConnections.get(channelId);
+
+      const collectingNow =
+        !!connection?.collecting;
+
+      res.json({
+
+        loggedIn: true,
+
+        channelId,
+
+        isLive,
+
+        collecting:
+          collectingNow,
+
+        live: live
+          ? {
+              liveId:
+                live.liveId || null,
+
+              title:
+                live.liveTitle || null,
+
+              channelId:
+                live.channelId || channelId
+            }
+          : null
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "방송 상태 조회 오류:",
+        error
+      );
+
+      res.status(500).json({
+
+        loggedIn: true,
+
+        isLive: false,
+
+        collecting: false,
+
+        error:
+          error.message ||
+          "방송 상태를 확인할 수 없습니다."
+
+      });
+
+    }
+
+  }
+);
 
 app.get(
   "/api/live/messages",
