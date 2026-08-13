@@ -246,9 +246,7 @@ function addMessages(
    치지직 현재 방송 확인
 ========================================= */
 
-async function getCurrentLive(
-  channelId
-) {
+async function getCurrentLive(channelId) {
 
   const clientId =
     process.env.CHZZK_CLIENT_ID;
@@ -256,58 +254,37 @@ async function getCurrentLive(
   const clientSecret =
     process.env.CHZZK_CLIENT_SECRET;
 
-  if (!clientId) {
+  if (!clientId || !clientSecret) {
+
     throw new Error(
-      "CHZZK_CLIENT_ID가 없습니다."
+      "CHZZK_CLIENT_ID 또는 CHZZK_CLIENT_SECRET이 없습니다."
     );
+
   }
 
-  if (!clientSecret) {
-    throw new Error(
-      "CHZZK_CLIENT_SECRET이 없습니다."
-    );
-  }
-
-  if (!channelId) {
-    throw new Error(
-      "channelId가 없습니다."
-    );
-  }
+  console.log("");
+  console.log("=================================");
+  console.log("🔎 방송 상태 API 확인");
+  console.log("내 channelId:", channelId);
+  console.log("=================================");
 
   let next = null;
 
-  /*
-   * 치지직 공식 Live API는
-   * 현재 방송 중인 전체 방송 목록을 반환한다.
-   *
-   * 한 번에 최대 20개이므로
-   * page.next를 이용해 계속 검색한다.
-   */
-
-  for (
-    let pageNumber = 0;
-    pageNumber < 100;
-    pageNumber++
-  ) {
+  for (let page = 0; page < 20; page++) {
 
     const params =
-      new URLSearchParams();
-
-    params.set(
-      "size",
-      "20"
-    );
+      new URLSearchParams({
+        size: "20"
+      });
 
     if (next) {
-      params.set(
-        "next",
-        next
-      );
+      params.set("next", next);
     }
 
     const url =
-      "https://openapi.chzzk.naver.com/open/v1/lives?" +
-      params.toString();
+      `https://openapi.chzzk.naver.com/open/v1/lives?${params.toString()}`;
+
+    console.log("라이브 API 요청:", url);
 
     const response =
       await fetch(
@@ -320,16 +297,18 @@ async function getCurrentLive(
               clientId,
 
             "Client-Secret":
-              clientSecret,
-
-            "Accept":
-              "application/json"
+              clientSecret
           }
         }
       );
 
     const text =
       await response.text();
+
+    console.log(
+      "라이브 API 상태:",
+      response.status
+    );
 
     let data;
 
@@ -340,17 +319,26 @@ async function getCurrentLive(
 
     } catch {
 
+      console.error(
+        "라이브 API 원본 응답:",
+        text
+      );
+
       throw new Error(
-        "치지직 Live API 응답이 JSON이 아닙니다: " +
-        text.slice(0, 300)
+        "CHZZK 라이브 API 응답이 JSON이 아닙니다."
       );
 
     }
 
     if (!response.ok) {
 
+      console.error(
+        "라이브 API 오류:",
+        data
+      );
+
       throw new Error(
-        "치지직 방송 상태 조회 실패: " +
+        "CHZZK 방송 상태 조회 실패: " +
         (
           data.message ||
           data.error ||
@@ -364,45 +352,105 @@ async function getCurrentLive(
       data.content || data;
 
     const lives =
-      Array.isArray(
-        content.data
-      )
+      Array.isArray(content.data)
         ? content.data
         : [];
 
+    console.log(
+      `현재 ${lives.length}개 방송 확인`
+    );
+
     /*
-     * 현재 채널 방송 찾기
+     * 현재 방송 목록 출력
+     */
+
+    for (const live of lives) {
+
+      console.log(
+        "방송:",
+        {
+          liveId:
+            live.liveId,
+
+          channelId:
+            live.channelId,
+
+          channelName:
+            live.channelName,
+
+          title:
+            live.liveTitle
+        }
+      );
+
+    }
+
+    /*
+     * 내 채널 찾기
      */
 
     const found =
       lives.find(
-        (live) =>
-          String(
-            live.channelId
-          ) ===
-          String(channelId)
+        live =>
+          String(live.channelId).trim() ===
+          String(channelId).trim()
       );
 
     if (found) {
-      return found;
-    }
 
-    /*
-     * 다음 페이지
-     */
+      console.log("");
+      console.log(
+        "🔴 내 방송 발견!"
+      );
+
+      console.log(
+        "방송 ID:",
+        found.liveId
+      );
+
+      console.log(
+        "방송 제목:",
+        found.liveTitle
+      );
+
+      console.log(
+        "채널 ID:",
+        found.channelId
+      );
+
+      console.log("");
+
+      return found;
+
+    }
 
     next =
       content.page?.next ||
       null;
 
+    console.log(
+      "다음 페이지:",
+      next
+    );
+
     if (!next) {
       break;
     }
+
   }
+
+  console.log("");
+  console.log(
+    "⚫ 현재 방송 목록에서 내 채널을 찾지 못함"
+  );
+  console.log(
+    "검색한 channelId:",
+    channelId
+  );
+  console.log("");
 
   return null;
 }
-
 /* =========================================
    방송 세션 생성
 ========================================= */
