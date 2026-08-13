@@ -952,103 +952,130 @@ async function startChatCollection(req) {
     throw new Error("치지직 로그인이 필요합니다.");
   }
 
-  if (collecting) {
-    return;
+  const channelId =
+    req.session.channelId ||
+    req.session.userId;
+
+  if (!channelId) {
+    throw new Error("치지직 채널 ID를 확인할 수 없습니다.");
   }
 
   /*
-   * 현재는 치지직 공식 API에서 제공하는
-   * 실시간 채팅 연결 정보를 확인한 뒤 연결하도록 구성.
+   * 이미 이 방송인의 채팅 연결이 있으면
+   * 새로 만들지 않음
    */
+
+  if (chatConnections.has(channelId)) {
+
+    const existing =
+      chatConnections.get(channelId);
+
+    if (existing.collecting) {
+      return;
+    }
+
+  }
+
 
   console.log("");
   console.log("===== 채팅 수집 시작 =====");
+  console.log("채널 ID:", channelId);
+
+
+  /*
+   * 방송별 저장 파일 생성
+   */
+
+  const broadcast =
+    createBroadcastSession(req);
+
+
+  /*
+   * 이 방송인 전용 채팅 연결
+   */
+
+  const chatClient =
+    new ChzzkChat({
+
+      accessToken:
+        req.session.accessToken,
+
+      channelId:
+        channelId,
+
+      onChat: (chat) => {
+
+        console.log(
+          "[후던챗 채팅 저장]",
+          chat.nickname,
+          chat.content
+        );
+
+
+        /*
+         * 방송별 저장
+         */
+
+        saveBroadcastMessages([
+          chat
+        ]);
+
+
+        /*
+         * 기존 전체 채팅 저장
+         */
+
+        addMessages(
+          req,
+          [chat]
+        );
+
+      },
+
+
+      onStatus: (message) => {
+
+        console.log(
+          `[후던챗 ${channelId}]`,
+          message
+        );
+
+      }
+
+    });
+
+
+  /*
+   * 서버에 연결 정보 등록
+   */
+
+  chatConnections.set(
+    channelId,
+    {
+      chatClient,
+      collecting: true,
+      broadcast
+    }
+  );
+
 
   try {
 
-    /*
-     * 여기서 실제 치지직 채팅 연결 정보를
-     * 가져오는 API를 연결할 예정.
-     *
-     * 지금 단계에서는 서버 구조만 먼저 만들어 둔다.
-     */
+    await chatClient.connect();
 
-   currentBroadcast =
-  createBroadcastSession(req);
-
-
-/* =========================================
-   치지직 실시간 채팅 연결
-========================================= */
-
-const chatClient =
-  new ChzzkChat({
-
-    accessToken:
-      req.session.accessToken,
-
-    channelId:
-      req.session.channelId,
-
-    onChat: (chat) => {
-
-      console.log(
-        "[후던챗 채팅 저장]",
-        chat.nickname,
-        chat.content
-      );
-
-
-      /* 방송별 저장 */
-
-      saveBroadcastMessages([
-        chat
-      ]);
-
-
-      /* 기존 전체 채팅 저장 */
-
-      addMessages(
-        req,
-        [chat]
-      );
-
-    },
-
-    onStatus: (message) => {
-
-      console.log(
-        "[후던챗 채팅 상태]",
-        message
-      );
-
-    }
-
-  });
-
-
-/* 서버 전체에서 현재 소켓 사용 */
-
-chzzkSocket =
-  chatClient;
-
-
-await chatClient.connect();
-
-
-collecting = true;
-
-console.log(
-  "실시간 채팅 수집 시작 완료"
-);
+    console.log(
+      "실시간 채팅 연결 완료:",
+      channelId
+    );
 
   } catch (error) {
 
-    collecting = false;
+    /*
+     * 연결 실패하면 Map에서도 제거
+     */
 
-    console.error(
-      "채팅 수집 시작 오류:",
-      error
+    chatConnections.delete(
+      channelId
     );
 
     throw error;
@@ -1058,50 +1085,94 @@ console.log(
 }
 
 
-function stopChatCollection() {
+function stopChatCollection(req) {
 
-  collecting = false;
+  const channelId =
+    req.session.channelId ||
+    req.session.userId;
 
-  if (chzzkSocket) {
+  if (!channelId) {
+    return;
+  }
 
-    try {
-      chzzkSocket.disconnect();
-    } catch {}
+  const connection =
+    chatConnections.get(channelId);
 
-    chzzkSocket = null;
+  if (!connection) {
+    console.log(
+      "실행 중인 채팅 연결이 없습니다:",
+      channelId
+    );
+    return;
+  }
+
+
+  /*
+   * 치지직 채팅 연결 종료
+   */
+
+  try {
+
+    connection.chatClient.disconnect();
+
+  } catch (error) {
+
+    console.error(
+      "채팅 연결 종료 오류:",
+      error
+    );
 
   }
 
-  if (currentBroadcast) {
 
-    currentBroadcast.endedAt =
+  /*
+   * 방송 종료 시간 저장
+   */
+
+  if (connection.broadcast) {
+
+    connection.broadcast.endedAt =
       Date.now();
 
-    fs.writeFileSync(
-      currentBroadcast.file,
-      JSON.stringify(
-        currentBroadcast,
-        null,
-        2
-      ),
-      "utf8"
-    );
+    try {
 
-    console.log(
-      "방송 세션 저장 완료:",
-      currentBroadcast.id
-    );
+      fs.writeFileSync(
+        connection.broadcast.file,
+        JSON.stringify(
+          connection.broadcast,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+    } catch (error) {
+
+      console.error(
+        "방송 세션 저장 오류:",
+        error
+      );
+
+    }
 
   }
 
-  currentBroadcast = null;
+
+  /*
+   * 연결 목록에서 제거
+   */
+
+  chatConnections.delete(
+    channelId
+  );
+
 
   console.log(
-    "채팅 수집 중지"
+    "채팅 수집 중지:",
+    channelId
   );
 
 }
-
 
 /* 채팅 수집 시작 API */
 
@@ -1152,7 +1223,7 @@ app.post(
   "/api/live/stop",
   (req, res) => {
 
-    stopChatCollection();
+    stopChatCollection(req);
 
     res.json({
       success: true,
