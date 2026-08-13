@@ -493,7 +493,46 @@ app.get("/auth/callback", async (req, res) => {
       content.refreshToken || null;
 
     delete req.session.oauthState;
+    /*
+     * 사용자 정보 확보
+     */
 
+    const meResponse =
+      await fetch(
+        "https://openapi.chzzk.naver.com/open/v1/users/me",
+        {
+          headers: {
+            Authorization:
+              "Bearer " +
+              req.session.accessToken
+          }
+        }
+      );
+
+    const meData =
+      await meResponse.json();
+
+    const me =
+      meData.content || meData;
+
+    req.session.userId =
+      me.userId ||
+      me.id ||
+      me.channelId ||
+      null;
+
+    req.session.channelId =
+      me.channelId ||
+      me.userId ||
+      me.id ||
+      null;
+
+
+    /*
+     * 방송 자동 감시 시작
+     */
+
+    await startLiveWatcher(req);
     res.redirect("/");
 
   } catch (error) {
@@ -848,17 +887,610 @@ let chzzkSocket = null;
 let collecting = false;
 let currentBroadcast = null;
 
+/* =========================================
+   방송 감시 대상
+========================================= */
+
+const liveWatchers = new Map();
+
+/*
+  channelId 기준으로 저장
+
+  {
+    channelId,
+    accessToken,
+    req,
+    isLive,
+    liveId,
+    liveInfo,
+    timer
+  }
+*/
+
+
+/* =========================================
+   현재 방송 확인
+========================================= */
+
+async function getCurrentLive(channelId) {
+
+  const clientId =
+    process.env.CHZZK_CLIENT_ID;
+
+  const clientSecret =
+    process.env.CHZZK_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+
+    throw new Error(
+      "CHZZK_CLIENT_ID 또는 CHZZK_CLIENT_SECRET이 없습니다."
+    );
+
+  }
+
+  const response =
+    await fetch(
+      "https://openapi.chzzk.naver.com/open/v1/lives?size=20",
+      {
+        method: "GET",
+
+        headers: {
+          "Client-Id": clientId,
+          "Client-Secret": clientSecret
+        }
+      }
+    );
+
+  const text =
+    await response.text();
+
+  let data;
+
+  try {
+
+    data = JSON.parse(text);
+
+  } catch {
+
+    throw new Error(
+      "CHZZK 라이브 API 응답이 JSON이 아닙니다."
+    );
+
+  }
+
+  if (!response.ok) {
+
+    throw new Error(
+      "CHZZK 방송 상태 조회 실패: " +
+      (
+        data.message ||
+        data.error ||
+        JSON.stringify(data)
+      )
+    );
+
+  }
+
+  const content =
+    data.content || data;
+
+  const lives =
+    Array.isArray(content.data)
+      ? content.data
+      : [];
+
+  return (
+    lives.find(
+      live =>
+        String(live.channelId) ===
+        String(channelId)
+    ) || null
+  );
+
+}
+
+
+/* =========================================
+   방송 상태 확인
+========================================= */
+
+async function checkLiveWatcher(channelId) {
+
+  const watcher =
+    liveWatchers.get(channelId);
+
+  if (!watcher) {
+    return;
+  }
+
+  try {
+
+    const live =
+      await getCurrentLive(channelId);
+
+    const isLive =
+      !!live;
+
+    /*
+     * 방송 시작
+     */
+
+    if (
+      isLive &&
+      !watcher.isLive
+    ) {
+
+      console.log("");
+      console.log(
+        "================================="
+      );
+      console.log(
+        "🔴 방송 시작 감지"
+      );
+      console.log(
+        "채널 ID:",
+        channelId
+      );
+      console.log(
+        "방송 ID:",
+        live.liveId
+      );
+      console.log(
+        "방송 제목:",
+        live.liveTitle
+      );
+      console.log(
+        "================================="
+      );
+
+      watcher.isLive = true;
+      watcher.liveId =
+        live.liveId;
+
+      watcher.liveInfo =
+        live;
+
+
+      /*
+       * 자동으로 채팅 수집 시작
+       */
+
+      try {
+
+        await startChatCollection(
+          watcher.req
+        );
+
+        console.log(
+          "✅ 방송 시작 → 채팅 자동 수집 시작"
+        );
+
+      } catch (error) {
+
+        console.error(
+          "방송 시작 후 채팅 수집 실패:",
+          error
+        );
+
+      }
+
+    }
+
+
+    /*
+     * 방송 종료
+     */
+
+    if (
+      !isLive &&
+      watcher.isLive
+    ) {
+
+      console.log("");
+      console.log(
+        "================================="
+      );
+      console.log(
+        "⚫ 방송 종료 감지"
+      );
+      console.log(
+        "채널 ID:",
+        channelId
+      );
+      console.log(
+        "================================="
+      );
+
+
+      try {
+
+        stopChatCollection(
+          watcher.req
+        );
+
+      } catch (error) {
+
+        console.error(
+          "방송 종료 후 채팅 연결 종료 실패:",
+          error
+        );
+
+      }
+
+      watcher.isLive = false;
+      watcher.liveId = null;
+      watcher.liveInfo = null;
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      `[방송 상태 확인 오류] ${channelId}:`,
+      error.message
+    );
+
+  }
+
+}
+
+
+/* =========================================
+   방송 감시 시작
+========================================= */
+
+async function startLiveWatcher(req) {
+
+  const channelId =
+    req.session.channelId ||
+    req.session.userId;
+
+  const accessToken =
+    req.session.accessToken;
+
+  if (!channelId) {
+
+    throw new Error(
+      "채널 ID가 없습니다."
+    );
+
+  }
+
+  if (!accessToken) {
+
+    throw new Error(
+      "Access Token이 없습니다."
+    );
+
+  }
+
+
+  /*
+   * 이미 감시 중이면 기존 감시 유지
+   */
+
+  if (liveWatchers.has(channelId)) {
+
+    const watcher =
+      liveWatchers.get(channelId);
+
+    watcher.req = req;
+    watcher.accessToken =
+      accessToken;
+
+    return;
+
+  }
+
+
+  const watcher = {
+
+    channelId,
+
+    accessToken,
+
+    req,
+
+    isLive: false,
+
+    liveId: null,
+
+    liveInfo: null,
+
+    timer: null
+
+  };
+
+
+  liveWatchers.set(
+    channelId,
+    watcher
+  );
+
+
+  console.log("");
+  console.log(
+    "===== 방송 감시 시작 ====="
+  );
+  console.log(
+    "채널 ID:",
+    channelId
+  );
+  console.log(
+    "10초마다 방송 상태 확인"
+  );
+  console.log(
+    "=========================="
+  );
+
+
+  /*
+   * 로그인 직후 바로 한 번 확인
+   */
+
+  await checkLiveWatcher(
+    channelId
+  );
+
+
+  /*
+   * 이후 10초마다 확인
+   */
+
+  watcher.timer =
+    setInterval(
+      () => {
+
+        checkLiveWatcher(
+          channelId
+        );
+
+      },
+      10000
+    );
+
+}
+
+
+/* =========================================
+   방송 감시 중지
+========================================= */
+
+function stopLiveWatcher(channelId) {
+
+  const watcher =
+    liveWatchers.get(channelId);
+
+  if (!watcher) {
+    return;
+  }
+
+  if (watcher.timer) {
+
+    clearInterval(
+      watcher.timer
+    );
+
+  }
+
+  liveWatchers.delete(
+    channelId
+  );
+
+  console.log(
+    "방송 감시 종료:",
+    channelId
+  );
+
+}
+
+/* =========================================
+   CHZZK 방송 상태 확인
+========================================= */
+
+  const response =
+    await fetch(
+      "https://openapi.chzzk.naver.com/open/v1/lives?size=20",
+      {
+        method: "GET",
+
+        headers: {
+          "Client-Id": clientId,
+          "Client-Secret": clientSecret
+        }
+      }
+    );
+
+  const text =
+    await response.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(
+      "CHZZK 라이브 API 응답이 JSON이 아닙니다."
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      "CHZZK 라이브 상태 조회 실패: " +
+      (
+        data.message ||
+        data.error ||
+        JSON.stringify(data)
+      )
+    );
+  }
+
+  const content =
+    data.content || data;
+
+  const lives =
+    content.data ||
+    content.lives ||
+    [];
+
+  if (!Array.isArray(lives)) {
+    return null;
+  }
+
+  return (
+    lives.find(
+      live =>
+        String(live.channelId) ===
+        String(channelId)
+    ) || null
+  );
+
+}
+
+/* =========================================
+   방송 상태 자동 감시
+========================================= */
+
+async function checkBroadcastStatus() {
+
+  try {
+
+    /*
+     * 로그인한 채널이 있는 세션을 찾음
+     */
+
+    let targetChannelId = null;
+    let targetReq = null;
+
+    /*
+     * 현재 연결된 채널이 있다면 우선 사용
+     */
+
+    for (const [channelId] of chatConnections) {
+
+      targetChannelId = channelId;
+      break;
+
+    }
+
+    /*
+     * 아직 채팅 연결이 없다면
+     * 여기서는 자동 감시를 위해 별도 세션 정보가 필요함.
+     *
+     * 아래 방식으로는 로그인 세션을 직접 순회할 수 없기 때문에
+     * 실제 자동 시작은 로그인 직후 해당 세션에서 감시를 시작해야 함.
+     */
+
+    if (!targetChannelId) {
+      return;
+    }
+
+    const live =
+      await getCurrentLive(
+        targetChannelId
+      );
+
+    const isLive =
+      !!live;
+
+    /*
+     * 방송 시작
+     */
+
+    if (
+      isLive &&
+      !lastLiveState
+    ) {
+
+      console.log("");
+      console.log(
+        "================================="
+      );
+      console.log(
+        "🔴 방송 시작 감지!"
+      );
+      console.log(
+        "채널:",
+        targetChannelId
+      );
+      console.log(
+        "방송 ID:",
+        live.liveId
+      );
+      console.log(
+        "방송 제목:",
+        live.liveTitle
+      );
+      console.log(
+        "================================="
+      );
+
+      currentLiveInfo =
+        live;
+
+      lastLiveState = true;
+
+    }
+
+
+    /*
+     * 방송 종료
+     */
+
+    if (
+      !isLive &&
+      lastLiveState
+    ) {
+
+      console.log("");
+      console.log(
+        "================================="
+      );
+      console.log(
+        "⚫ 방송 종료 감지!"
+      );
+      console.log(
+        "================================="
+      );
+
+      lastLiveState = false;
+      currentLiveInfo = null;
+
+      /*
+       * 실제 채팅 연결이 있다면 종료
+       */
+
+      /*
+       * stopChatCollection()은
+       * req가 필요하기 때문에
+       * 여기서는 다음 단계에서 세션 구조와
+       * 같이 연결해주는 게 좋음.
+       */
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "[방송 상태 확인 오류]",
+      error.message
+    );
+
+  }
+
+}
 
 /* =========================================
    방송 세션
 ========================================= */
 
-function createBroadcastSession(req) {
+function createBroadcastSession(req, liveInfo = null) {
 
   const channelId =
     safeFileName(getChannelId(req));
 
   const broadcastId =
+    liveInfo?.liveId ||
     `${Date.now()}`;
 
   const broadcastDir =
@@ -887,6 +1519,14 @@ function createBroadcastSession(req) {
     id: broadcastId,
 
     channelId,
+
+    liveId:
+      liveInfo?.liveId ||
+      null,
+
+    title:
+      liveInfo?.liveTitle ||
+      null,
 
     startedAt: Date.now(),
 
@@ -955,7 +1595,11 @@ async function startChatCollection(req) {
   const channelId =
     req.session.channelId ||
     req.session.userId;
+const watcher =
+  liveWatchers.get(channelId);
 
+const liveInfo =
+  watcher?.liveInfo || null;
   if (!channelId) {
     throw new Error("치지직 채널 ID를 확인할 수 없습니다.");
   }
@@ -987,7 +1631,10 @@ async function startChatCollection(req) {
    */
 
   const broadcast =
-    createBroadcastSession(req);
+  createBroadcastSession(
+    req,
+    liveInfo
+  );
 
 
   /*
