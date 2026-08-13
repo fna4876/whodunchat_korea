@@ -1525,7 +1525,7 @@ app.get(
       /*
        * Access Token 요청
        */
-      const body =
+     const body =
   new URLSearchParams({
 
     grantType:
@@ -1545,21 +1545,20 @@ app.get(
 
   });
 
-
       const response =
-        await fetch(
-          `${CHZZK_API}/auth/v1/token`,
-          {
-            method: "POST",
+  await fetch(
+    `${CHZZK_API}/auth/v1/token`,
+    {
+      method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/x-www-form-urlencoded"
-            },
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded"
+      },
 
-            body
-          }
-        );
+      body
+    }
+  );
 
 
       const text =
