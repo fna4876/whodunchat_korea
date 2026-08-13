@@ -1527,66 +1527,153 @@ app.get(
       );
 
 
-      /*
-       * Access Token 요청
-       */
-     const body = {
-  grantType: "authorization_code",
-  clientId: CHZZK_CLIENT_ID,
-  clientSecret: CHZZK_CLIENT_SECRET,
-  code: String(code),
-  state: String(state)
-};
+      /* =========================================
+   Access Token 요청
+========================================= */
 
-const response = await fetch(
-  `${CHZZK_API}/auth/v1/token`,
-  {
-    method: "POST",
+console.log("");
+console.log("🔐 OAuth Callback 도착");
+console.log("code:", String(code).slice(0, 10) + "...");
+console.log("state:", String(state).slice(0, 10) + "...");
 
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify(body)
-  }
+console.log(
+  "Client ID 존재:",
+  !!CHZZK_CLIENT_ID
 );
 
-const text = await response.text();
+console.log(
+  "Client Secret 존재:",
+  !!CHZZK_CLIENT_SECRET
+);
 
-let data = null;
+console.log(
+  "Client Secret 길이:",
+  CHZZK_CLIENT_SECRET.length
+);
 
-try {
-  data = text ? JSON.parse(text) : null;
-} catch {
-  data = null;
-}
+console.log(
+  "Code 존재:",
+  !!code
+);
 
-if (!response.ok) {
+console.log(
+  "State 존재:",
+  !!state
+);
+
+
+const tokenBody = {
+
+  grantType:
+    "authorization_code",
+
+  clientId:
+    CHZZK_CLIENT_ID,
+
+  clientSecret:
+    CHZZK_CLIENT_SECRET,
+
+  code:
+    String(code),
+
+  state:
+    String(state)
+
+};
+
+
+console.log(
+  "🔄 Access Token 요청 시작"
+);
+
+
+const tokenResponse =
+  await fetch(
+    `${CHZZK_API}/auth/v1/token`,
+    {
+
+      method: "POST",
+
+      headers: {
+
+        "Content-Type":
+          "application/json"
+
+      },
+
+      body:
+        JSON.stringify(
+          tokenBody
+        )
+
+    }
+  );
+
+
+const tokenText =
+  await tokenResponse.text();
+
+
+console.log(
+  "Token HTTP 상태:",
+  tokenResponse.status
+);
+
+
+if (!tokenResponse.ok) {
+
   console.error(
     "❌ Token 요청 실패:",
-    response.status,
-    text
+    tokenResponse.status,
+    tokenText
   );
 
   throw new Error(
-    data?.message ||
-    text ||
-    `HTTP ${response.status}`
+    "잘못된 값을 입력했습니다."
   );
+
 }
 
-const content =
-  data?.content || data;
+
+let tokenData;
+
+try {
+
+  tokenData =
+    JSON.parse(
+      tokenText
+    );
+
+} catch {
+
+  throw new Error(
+    "Token 응답을 JSON으로 읽을 수 없습니다."
+  );
+
+}
+
+
+console.log(
+  "✅ Token 요청 성공"
+);
+
+
+const tokenContent =
+  tokenData?.content ||
+  tokenData;
+
 
 const accessToken =
-  content?.accessToken;
+  tokenContent?.accessToken;
+
 
 if (!accessToken) {
+
   throw new Error(
     "Access Token을 받지 못했습니다."
   );
-}
 
+}
 
       /*
        * 세션에 Access Token 저장
