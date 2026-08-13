@@ -1,6 +1,5 @@
 import io from "socket.io-client";
 
-
 const CHZZK_API =
   "https://openapi.chzzk.naver.com";
 
@@ -61,37 +60,27 @@ export class ChzzkChat {
     }
 
 
-    this.closed =
-      false;
+    this.closed = false;
 
 
     this.onStatus(
-      "세션 URL 요청 중..."
+      "치지직 채팅 세션 요청 중..."
     );
 
-
-    /*
-     * Access Token 인증으로
-     * 세션 URL 발급
-     */
 
     const response =
       await fetch(
         `${CHZZK_API}/open/v1/sessions/auth`,
         {
-
           method: "GET",
 
           headers: {
-
             Accept:
               "application/json",
 
             Authorization:
               `Bearer ${this.accessToken}`
-
           }
-
         }
       );
 
@@ -111,7 +100,7 @@ export class ChzzkChat {
     } catch {
 
       throw new Error(
-        `세션 URL 응답 파싱 실패: ${text}`
+        `세션 응답 파싱 실패: ${text}`
       );
 
     }
@@ -122,7 +111,7 @@ export class ChzzkChat {
       throw new Error(
         data?.message ||
         data?.error ||
-        `세션 URL 요청 실패: HTTP ${response.status}`
+        `세션 요청 실패: HTTP ${response.status}`
       );
 
     }
@@ -131,26 +120,28 @@ export class ChzzkChat {
     const sessionUrl =
       data?.content?.url ||
       data?.data?.url ||
-      data?.url;
+      data?.url ||
+      null;
 
 
     if (!sessionUrl) {
 
       throw new Error(
-        "치지직 세션 URL을 받지 못했습니다."
+        "치지직 Socket 세션 URL을 받지 못했습니다."
       );
 
     }
 
 
-    this.onStatus(
-      "Socket 연결 중..."
+    console.log(
+      "🔗 CHZZK Session URL 발급 완료"
     );
 
 
-    /*
-     * Socket.IO 연결
-     */
+    this.onStatus(
+      "치지직 Socket 연결 중..."
+    );
+
 
     await this.connectSocket(
       sessionUrl
@@ -159,43 +150,72 @@ export class ChzzkChat {
   }
 
 
-  connectSocket(
-    sessionUrl
-  ) {
+  connectSocket(sessionUrl) {
 
     return new Promise(
-      (
-        resolve,
-        reject
-      ) => {
+      (resolve, reject) => {
 
-        let resolved =
-          false;
+        let finished = false;
 
-        let timer;
+        let timer = null;
 
 
-        const socketOptions = {
+        const finishReject =
+          (error) => {
 
-          reconnection:
-            false,
+            if (finished) {
+              return;
+            }
 
-          forceNew:
-            true,
+            finished = true;
 
-          timeout:
-            5000,
+            if (timer) {
+              clearTimeout(timer);
+            }
 
-          transports:
-            ["websocket"]
+            reject(error);
 
-        };
+          };
 
+
+        const finishResolve =
+          () => {
+
+            if (finished) {
+              return;
+            }
+
+            finished = true;
+
+            if (timer) {
+              clearTimeout(timer);
+            }
+
+            resolve();
+
+          };
+
+
+        /*
+         * 중요:
+         * 치지직 Socket 서버는
+         * Socket.IO 2.x 클라이언트를 사용해야 함
+         */
 
         const socket =
-          io(
+          io.connect(
             sessionUrl,
-            socketOptions
+            {
+              reconnection: false,
+
+              forceNew: true,
+
+              timeout: 10000,
+
+              transports: [
+                "websocket"
+              ]
+            }
           );
 
 
@@ -207,29 +227,25 @@ export class ChzzkChat {
           setTimeout(
             () => {
 
-              if (!resolved) {
+              finishReject(
+                new Error(
+                  "치지직 채팅 Socket 연결 시간이 초과되었습니다."
+                )
+              );
 
-                resolved =
-                  true;
 
-                try {
-
-                  socket.disconnect();
-
-                } catch {}
-
-                reject(
-                  new Error(
-                    "치지직 채팅 Socket 연결 시간이 초과되었습니다."
-                  )
-                );
-
-              }
+              try {
+                socket.disconnect();
+              } catch {}
 
             },
-            10000
+            15000
           );
 
+
+        /*
+         * Socket 연결
+         */
 
         socket.on(
           "connect",
@@ -237,6 +253,11 @@ export class ChzzkChat {
 
             this.connected =
               true;
+
+
+            console.log(
+              "✅ 치지직 Socket 연결 성공"
+            );
 
 
             this.onStatus(
@@ -248,7 +269,7 @@ export class ChzzkChat {
 
 
         /*
-         * SYSTEM
+         * SYSTEM 이벤트
          */
 
         socket.on(
@@ -263,14 +284,28 @@ export class ChzzkChat {
 
             console.log(
               "CHZZK SYSTEM:",
-              JSON.stringify(
-                data
-              )
+              data
             );
 
 
+            if (!data) {
+              return;
+            }
+
+
+            /*
+             * Socket 연결 직후
+             *
+             * {
+             *   type: "connected",
+             *   data: {
+             *     sessionKey: "..."
+             *   }
+             * }
+             */
+
             if (
-              data?.type ===
+              data.type ===
               "connected"
             ) {
 
@@ -281,26 +316,20 @@ export class ChzzkChat {
 
               if (!this.sessionKey) {
 
-                if (!resolved) {
-
-                  resolved =
-                    true;
-
-                  clearTimeout(
-                    timer
-                  );
-
-                  reject(
-                    new Error(
-                      "Socket 연결은 되었지만 sessionKey를 받지 못했습니다."
-                    )
-                  );
-
-                }
+                finishReject(
+                  new Error(
+                    "Socket 연결은 되었지만 sessionKey를 받지 못했습니다."
+                  )
+                );
 
                 return;
 
               }
+
+
+              console.log(
+                "🔑 Session Key 획득"
+              );
 
 
               try {
@@ -317,43 +346,25 @@ export class ChzzkChat {
                 );
 
 
-                if (!resolved) {
-
-                  resolved =
-                    true;
-
-                  clearTimeout(
-                    timer
-                  );
-
-                  resolve();
-
-                }
-
               } catch (error) {
 
-                if (!resolved) {
+                finishReject(
+                  error
+                );
 
-                  resolved =
-                    true;
-
-                  clearTimeout(
-                    timer
-                  );
-
-                  reject(
-                    error
-                  );
-
-                }
+                return;
 
               }
 
             }
 
 
+            /*
+             * 구독 완료
+             */
+
             if (
-              data?.type ===
+              data.type ===
               "subscribed"
             ) {
 
@@ -365,13 +376,30 @@ export class ChzzkChat {
                 this.subscribed =
                   true;
 
+
+                console.log(
+                  "✅ CHAT 구독 확인"
+                );
+
+
+                this.onStatus(
+                  "실시간 채팅 수신 준비 완료"
+                );
+
+
+                finishResolve();
+
               }
 
             }
 
 
+            /*
+             * 구독 취소
+             */
+
             if (
-              data?.type ===
+              data.type ===
               "revoked"
             ) {
 
@@ -386,7 +414,7 @@ export class ChzzkChat {
 
 
         /*
-         * 실제 채팅
+         * 실제 채팅 메시지
          */
 
         socket.on(
@@ -400,39 +428,55 @@ export class ChzzkChat {
 
 
             if (!data) {
-
               return;
-
             }
+
+
+            console.log(
+              "💬 CHZZK CHAT:",
+              data
+            );
 
 
             const message = {
 
               id:
                 [
-                  data.channelId,
-                  data.senderChannelId,
-                  data.messageTime,
-                  data.content
+                  data.channelId ||
+                    this.channelId,
+
+                  data.senderChannelId ||
+                    "",
+
+                  data.messageTime ||
+                    Date.now(),
+
+                  data.content ||
+                    ""
                 ].join("-"),
+
 
               channelId:
                 data.channelId ||
                 this.channelId,
 
+
               nickname:
                 data?.profile?.nickname ||
                 "알 수 없음",
 
+
               content:
                 data.content ||
                 "",
+
 
               timestamp:
                 Number(
                   data.messageTime ||
                   Date.now()
                 ),
+
 
               senderChannelId:
                 data.senderChannelId ||
@@ -449,6 +493,10 @@ export class ChzzkChat {
         );
 
 
+        /*
+         * Socket 종료
+         */
+
         socket.on(
           "disconnect",
           reason => {
@@ -460,63 +508,29 @@ export class ChzzkChat {
               false;
 
 
-            this.onStatus(
-              `Socket 연결 종료: ${reason || "unknown"}`
+            console.log(
+              "⚠️ CHZZK Socket 종료:",
+              reason
             );
 
 
-            /*
-             * 의도적인 종료가 아니라면
-             * 현재 연결 실패 처리
-             */
+            this.onStatus(
+              `Socket 연결 종료: ${
+                reason ||
+                "unknown"
+              }`
+            );
+
 
             if (
               !this.closed &&
-              !resolved
+              !finished
             ) {
 
-              resolved =
-                true;
-
-              clearTimeout(
-                timer
-              );
-
-              reject(
+              finishReject(
                 new Error(
-                  `Socket 연결 종료: ${reason || "unknown"}`
-                )
-              );
-
-            }
-
-          }
-        );
-
-
-        socket.on(
-          "connect_error",
-          error => {
-
-            console.error(
-              "CHZZK Socket 오류:",
-              error
-            );
-
-
-            if (!resolved) {
-
-              resolved =
-                true;
-
-              clearTimeout(
-                timer
-              );
-
-              reject(
-                new Error(
-                  `치지직 Socket 연결 실패: ${
-                    error?.message ||
+                  `치지직 Socket 연결 종료: ${
+                    reason ||
                     "unknown"
                   }`
                 )
@@ -527,6 +541,54 @@ export class ChzzkChat {
           }
         );
 
+
+        /*
+         * 연결 오류
+         */
+
+        socket.on(
+          "connect_error",
+          error => {
+
+            console.error(
+              "❌ CHZZK Socket 연결 오류:",
+              error
+            );
+
+
+            finishReject(
+              new Error(
+                `치지직 Socket 연결 실패: ${
+                  error?.message ||
+                  "unknown"
+                }`
+              )
+            );
+
+          }
+        );
+
+
+        /*
+         * 일반 오류
+         */
+
+        socket.on(
+          "error",
+          error => {
+
+            console.error(
+              "❌ CHZZK Socket error:",
+              error
+            );
+
+          }
+        );
+
+
+        /*
+         * 명시적으로 연결
+         */
 
         socket.connect();
 
@@ -548,7 +610,7 @@ export class ChzzkChat {
 
 
     this.onStatus(
-      "CHAT 이벤트 구독 요청..."
+      "채팅 이벤트 구독 요청 중..."
     );
 
 
@@ -558,6 +620,12 @@ export class ChzzkChat {
       );
 
 
+    /*
+     * 중요:
+     * sessionKey는 POST body가 아니라
+     * Query Parameter로 전달
+     */
+
     url.searchParams.set(
       "sessionKey",
       this.sessionKey
@@ -566,10 +634,11 @@ export class ChzzkChat {
 
     const response =
       await fetch(
-        url,
+        url.toString(),
         {
 
-          method: "POST",
+          method:
+            "POST",
 
           headers: {
 
@@ -589,9 +658,24 @@ export class ChzzkChat {
       await response.text();
 
 
+    let data = null;
+
+
+    try {
+
+      data =
+        text
+          ? JSON.parse(text)
+          : null;
+
+    } catch {}
+
+
     if (!response.ok) {
 
       throw new Error(
+        data?.message ||
+        data?.error ||
         `채팅 구독 실패: HTTP ${response.status} ${text}`
       );
 
@@ -605,16 +689,16 @@ export class ChzzkChat {
   }
 
 
-  normalizeData(
-    raw
-  ) {
+  normalizeData(raw) {
 
     if (
       Array.isArray(raw)
     ) {
 
-      return raw[0] ||
-        null;
+      return (
+        raw[0] ||
+        null
+      );
 
     }
 
@@ -634,6 +718,7 @@ export class ChzzkChat {
     this.connected =
       false;
 
+
     this.subscribed =
       false;
 
@@ -645,6 +730,7 @@ export class ChzzkChat {
         this.socket.disconnect();
 
       } catch {}
+
 
       this.socket =
         null;

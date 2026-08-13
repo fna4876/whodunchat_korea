@@ -10,6 +10,6 @@
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^2.0.3"
   }
 }
