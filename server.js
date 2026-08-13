@@ -9,8 +9,16 @@ import { ChzzkChat } from "./chzzk-chat.js";
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
+/* =========================================
+   전역 상태
+========================================= */
+
 const chatConnections = new Map();
 const liveWatchers = new Map();
+
+/* =========================================
+   Express
+========================================= */
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -34,41 +42,53 @@ app.use(
   })
 );
 
-
 /* =========================================
-   채팅 저장
+   채팅 저장 폴더
 ========================================= */
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const CHAT_DIR = path.join(DATA_DIR, "chats");
+const DATA_DIR =
+  path.join(process.cwd(), "data");
+
+const CHAT_DIR =
+  path.join(DATA_DIR, "chats");
 
 if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(DATA_DIR, {
+    recursive: true
+  });
 }
 
 if (!fs.existsSync(CHAT_DIR)) {
-  fs.mkdirSync(CHAT_DIR, { recursive: true });
+  fs.mkdirSync(CHAT_DIR, {
+    recursive: true
+  });
 }
 
+/* =========================================
+   유틸
+========================================= */
 
 function safeFileName(value) {
   return String(value || "unknown")
-    .replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
+    .replace(
+      /[^a-zA-Z0-9가-힣_-]/g,
+      "_"
+    );
 }
-
 
 function getChannelId(req) {
   return (
     req.session.channelId ||
     req.session.userId ||
-    "unknown"
+    null
   );
 }
 
-
 function getChatFile(req) {
   const channelId =
-    safeFileName(getChannelId(req));
+    safeFileName(
+      getChannelId(req) || "unknown"
+    );
 
   return path.join(
     CHAT_DIR,
@@ -76,9 +96,33 @@ function getChatFile(req) {
   );
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]
+  );
+}
+
+function randomState() {
+  return crypto
+    .randomBytes(24)
+    .toString("hex");
+}
+
+/* =========================================
+   저장된 채팅 불러오기
+========================================= */
 
 function loadSavedMessages(req) {
-  const file = getChatFile(req);
+  const file =
+    getChatFile(req);
 
   try {
     if (!fs.existsSync(file)) {
@@ -86,7 +130,10 @@ function loadSavedMessages(req) {
     }
 
     const text =
-      fs.readFileSync(file, "utf8");
+      fs.readFileSync(
+        file,
+        "utf8"
+      );
 
     const data =
       JSON.parse(text);
@@ -106,19 +153,32 @@ function loadSavedMessages(req) {
   }
 }
 
+/* =========================================
+   채팅 저장
+========================================= */
 
-function saveMessages(req, messages) {
-  const file = getChatFile(req);
+function saveMessages(
+  req,
+  messages
+) {
+  const file =
+    getChatFile(req);
 
   fs.writeFileSync(
     file,
-    JSON.stringify(messages, null, 2),
+    JSON.stringify(
+      messages,
+      null,
+      2
+    ),
     "utf8"
   );
 }
 
-
-function addMessages(req, newMessages) {
+function addMessages(
+  req,
+  newMessages
+) {
 
   if (!Array.isArray(newMessages)) {
     return;
@@ -132,7 +192,9 @@ function addMessages(req, newMessages) {
     ...newMessages
   ];
 
-  const seen = new Set();
+  const seen =
+    new Set();
+
   const result = [];
 
   for (const message of merged) {
@@ -152,6 +214,7 @@ function addMessages(req, newMessages) {
     seen.add(id);
 
     result.push({
+
       id,
 
       nickname:
@@ -169,709 +232,23 @@ function addMessages(req, newMessages) {
       timestamp:
         message.timestamp ||
         Date.now()
+
     });
   }
 
-  saveMessages(req, result);
-}
-
-
-/* =========================================
-   저장된 채팅 내역
-========================================= */
-
-app.get(
-  "/api/chat/info",
-  (req, res) => {
-
-    try {
-
-      if (!req.session.accessToken) {
-
-        return res.status(401).json({
-          error:
-            "로그인이 필요합니다."
-        });
-
-      }
-
-      const messages =
-        loadSavedMessages(req);
-
-      if (messages.length === 0) {
-
-        return res.json({
-          count: 0,
-          firstTimestamp: null,
-          lastTimestamp: null
-        });
-
-      }
-
-      const timestamps =
-        messages
-          .map(message =>
-            Number(message.timestamp)
-          )
-          .filter(timestamp =>
-            Number.isFinite(timestamp)
-          );
-
-      res.json({
-
-        count:
-          messages.length,
-
-        firstTimestamp:
-          timestamps.length
-            ? Math.min(...timestamps)
-            : null,
-
-        lastTimestamp:
-          timestamps.length
-            ? Math.max(...timestamps)
-            : null
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "채팅 내역 조회 오류:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          "채팅 내역을 불러오지 못했습니다."
-      });
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   로그인
-========================================= */
-
-function randomState() {
-
-  return crypto
-    .randomBytes(24)
-    .toString("hex");
-
-}
-
-
-function escapeHtml(value) {
-
-  return String(value ?? "").replace(
-    /[&<>"']/g,
-    (char) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      })[char]
+  saveMessages(
+    req,
+    result
   );
-
 }
 
-
 /* =========================================
-   치지직 로그인 시작
+   치지직 현재 방송 확인
 ========================================= */
 
-app.get(
-  "/auth/login",
-  (req, res) => {
-
-    try {
-
-      const clientId =
-        process.env.CHZZK_CLIENT_ID;
-
-      const clientSecret =
-        process.env.CHZZK_CLIENT_SECRET;
-
-      const redirectUri =
-        process.env.CHZZK_REDIRECT_URI ||
-        `http://localhost:${PORT}/auth/callback`;
-
-      if (!clientId) {
-
-        return res.status(500).send(
-          "CHZZK_CLIENT_ID가 .env에 없습니다."
-        );
-
-      }
-
-      if (!clientSecret) {
-
-        return res.status(500).send(
-          "CHZZK_CLIENT_SECRET이 .env에 없습니다."
-        );
-
-      }
-
-      const state =
-        randomState();
-
-      req.session.oauthState =
-        state;
-
-      const params =
-        new URLSearchParams({
-          response_type: "code",
-          clientId,
-          redirectUri,
-          state
-        });
-
-      const loginUrl =
-        `https://chzzk.naver.com/account-interlock?${params.toString()}`;
-
-      res.redirect(loginUrl);
-
-    } catch (error) {
-
-      console.error(
-        "치지직 로그인 시작 오류:",
-        error
-      );
-
-      res.status(500).send(
-        `로그인 시작 실패: ${escapeHtml(error.message)}`
-      );
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   로그인 콜백
-========================================= */
-
-app.get(
-  "/auth/callback",
-  async (req, res) => {
-
-    try {
-
-      const code =
-        String(req.query.code || "");
-
-      const state =
-        String(req.query.state || "");
-
-      if (!code) {
-        throw new Error(
-          "authorization code를 받지 못했습니다."
-        );
-      }
-
-      if (!state) {
-        throw new Error(
-          "state를 받지 못했습니다."
-        );
-      }
-
-      if (
-        !req.session.oauthState ||
-        state !== req.session.oauthState
-      ) {
-
-        throw new Error(
-          "로그인 상태 확인에 실패했습니다."
-        );
-
-      }
-
-      const clientId =
-        process.env.CHZZK_CLIENT_ID;
-
-      const clientSecret =
-        process.env.CHZZK_CLIENT_SECRET;
-
-      const redirectUri =
-        process.env.CHZZK_REDIRECT_URI ||
-        `http://localhost:${PORT}/auth/callback`;
-
-      if (!clientId) {
-        throw new Error(
-          "CHZZK_CLIENT_ID가 없습니다."
-        );
-      }
-
-      if (!clientSecret) {
-        throw new Error(
-          "CHZZK_CLIENT_SECRET이 없습니다."
-        );
-      }
-
-      const response =
-        await fetch(
-          "https://openapi.chzzk.naver.com/auth/v1/token",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-
-              grantType:
-                "authorization_code",
-
-              clientId,
-              clientSecret,
-              code,
-              state
-
-            })
-          }
-        );
-
-      const tokenText =
-        await response.text();
-
-      let token;
-
-      try {
-
-        token =
-          JSON.parse(tokenText);
-
-      } catch {
-
-        throw new Error(
-          "토큰 API 응답이 JSON이 아닙니다."
-        );
-
-      }
-
-      if (!response.ok) {
-
-        throw new Error(
-          "토큰 발급 실패: " +
-          (
-            token.message ||
-            token.error ||
-            JSON.stringify(token)
-          )
-        );
-
-      }
-
-      const content =
-        token.content || token;
-
-      if (!content.accessToken) {
-
-        throw new Error(
-          "accessToken을 받지 못했습니다."
-        );
-
-      }
-
-      req.session.accessToken =
-        content.accessToken;
-
-      req.session.refreshToken =
-        content.refreshToken || null;
-
-      delete req.session.oauthState;
-
-
-      /* ================================
-         사용자 정보 확보
-      ================================= */
-
-      const meResponse =
-        await fetch(
-          "https://openapi.chzzk.naver.com/open/v1/users/me",
-          {
-            headers: {
-              Authorization:
-                "Bearer " +
-                req.session.accessToken
-            }
-          }
-        );
-
-      const meData =
-        await meResponse.json();
-
-      if (!meResponse.ok) {
-
-        throw new Error(
-          meData.message ||
-          "사용자 정보를 가져오지 못했습니다."
-        );
-
-      }
-
-      const me =
-        meData.content || meData;
-
-      req.session.userId =
-        me.userId ||
-        me.id ||
-        me.channelId ||
-        null;
-
-      req.session.channelId =
-        me.channelId ||
-        me.userId ||
-        me.id ||
-        null;
-
-
-      /* ================================
-         방송 자동 감시 시작
-      ================================= */
-
-      await startLiveWatcher(req);
-
-      res.redirect("/");
-
-    } catch (error) {
-
-      console.error(
-        "치지직 로그인 오류:",
-        error
-      );
-
-      res.status(400).send(`
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>로그인 실패</title>
-
-<style>
-
-body{
-  background:#080808;
-  color:#eee;
-  font-family:Arial,sans-serif;
-  padding:40px;
-}
-
-.box{
-  max-width:600px;
-  margin:80px auto;
-  border:1px solid #333;
-  padding:30px;
-  background:#111;
-  border-radius:12px;
-}
-
-h2{
-  color:#ff6262;
-}
-
-pre{
-  white-space:pre-wrap;
-  word-break:break-word;
-  color:#aaa;
-}
-
-a{
-  color:#00d564;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="box">
-
-<h2>로그인 실패</h2>
-
-<pre>${escapeHtml(error.message)}</pre>
-
-<a href="/">
-후던챗으로 돌아가기
-</a>
-
-</div>
-
-</body>
-</html>
-      `);
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   내 계정
-========================================= */
-
-app.get(
-  "/api/me",
-  async (req, res) => {
-
-    try {
-
-      if (!req.session.accessToken) {
-
-        return res.json({
-          loggedIn: false
-        });
-
-      }
-
-      const response =
-        await fetch(
-          "https://openapi.chzzk.naver.com/open/v1/users/me",
-          {
-            headers: {
-              Authorization:
-                "Bearer " +
-                req.session.accessToken
-            }
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-
-        return res.json({
-          loggedIn: false,
-          error:
-            data.message ||
-            "치지직 API 오류"
-        });
-
-      }
-
-      const me =
-        data.content || data;
-
-      req.session.userId =
-        me.userId ||
-        me.id ||
-        me.channelId ||
-        null;
-
-      req.session.channelId =
-        me.channelId ||
-        me.userId ||
-        me.id ||
-        null;
-
-      res.json({
-        loggedIn: true,
-        me
-      });
-
-    } catch (error) {
-
-      console.error(
-        "내 계정 확인 오류:",
-        error
-      );
-
-      res.json({
-        loggedIn: false,
-        error:
-          error.message
-      });
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   저장된 채팅 전체 조회
-========================================= */
-
-app.get(
-  "/api/chat/history",
-  (req, res) => {
-
-    try {
-
-      if (!req.session.accessToken) {
-
-        return res.status(401).json({
-          error:
-            "로그인이 필요합니다."
-        });
-
-      }
-
-      const messages =
-        loadSavedMessages(req);
-
-      res.json({
-        messages,
-        count:
-          messages.length
-      });
-
-    } catch (error) {
-
-      console.error(
-        "채팅 기록 조회 오류:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          "채팅 기록을 불러오지 못했습니다."
-      });
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   새로운 채팅 저장
-========================================= */
-
-app.post(
-  "/api/chat/save",
-  (req, res) => {
-
-    try {
-
-      if (!req.session.accessToken) {
-
-        return res.status(401).json({
-          error:
-            "로그인이 필요합니다."
-        });
-
-      }
-
-      const incoming =
-        req.body.messages;
-
-      if (!Array.isArray(incoming)) {
-
-        return res.status(400).json({
-          error:
-            "messages 배열이 필요합니다."
-        });
-
-      }
-
-      addMessages(
-        req,
-        incoming
-      );
-
-      const messages =
-        loadSavedMessages(req);
-
-      res.json({
-
-        success: true,
-
-        count:
-          messages.length
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "채팅 저장 오류:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          "채팅 저장에 실패했습니다."
-      });
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   저장된 채팅 삭제
-========================================= */
-
-app.delete(
-  "/api/chat/history",
-  (req, res) => {
-
-    try {
-
-      if (!req.session.accessToken) {
-
-        return res.status(401).json({
-          error:
-            "로그인이 필요합니다."
-        });
-
-      }
-
-      const file =
-        getChatFile(req);
-
-      if (fs.existsSync(file)) {
-        fs.unlinkSync(file);
-      }
-
-      res.json({
-        success: true
-      });
-
-    } catch (error) {
-
-      console.error(
-        "채팅 삭제 오류:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          "채팅 기록 삭제에 실패했습니다."
-      });
-
-    }
-
-  }
-);
-
-
-/* =========================================
-   방송 / 채팅 상태
-========================================= */
-
-let currentBroadcast = null;
-
-
-/* =========================================
-   현재 방송 확인
-========================================= */
-
-async function getCurrentLive(channelId) {
+async function getCurrentLive(
+  channelId
+) {
 
   const clientId =
     process.env.CHZZK_CLIENT_ID;
@@ -879,26 +256,47 @@ async function getCurrentLive(channelId) {
   const clientSecret =
     process.env.CHZZK_CLIENT_SECRET;
 
-  if (!clientId || !clientSecret) {
-
+  if (!clientId) {
     throw new Error(
-      "CHZZK_CLIENT_ID 또는 CHZZK_CLIENT_SECRET이 없습니다."
+      "CHZZK_CLIENT_ID가 없습니다."
     );
+  }
 
+  if (!clientSecret) {
+    throw new Error(
+      "CHZZK_CLIENT_SECRET이 없습니다."
+    );
+  }
+
+  if (!channelId) {
+    throw new Error(
+      "channelId가 없습니다."
+    );
   }
 
   let next = null;
 
   /*
-   * 라이브 목록을 페이지별로 확인
+   * 치지직 공식 Live API는
+   * 현재 방송 중인 전체 방송 목록을 반환한다.
+   *
+   * 한 번에 최대 20개이므로
+   * page.next를 이용해 계속 검색한다.
    */
 
-  for (let page = 0; page < 20; page++) {
+  for (
+    let pageNumber = 0;
+    pageNumber < 100;
+    pageNumber++
+  ) {
 
     const params =
-      new URLSearchParams({
-        size: "20"
-      });
+      new URLSearchParams();
+
+    params.set(
+      "size",
+      "20"
+    );
 
     if (next) {
       params.set(
@@ -907,9 +305,13 @@ async function getCurrentLive(channelId) {
       );
     }
 
+    const url =
+      "https://openapi.chzzk.naver.com/open/v1/lives?" +
+      params.toString();
+
     const response =
       await fetch(
-        `https://openapi.chzzk.naver.com/open/v1/lives?${params.toString()}`,
+        url,
         {
           method: "GET",
 
@@ -918,7 +320,10 @@ async function getCurrentLive(channelId) {
               clientId,
 
             "Client-Secret":
-              clientSecret
+              clientSecret,
+
+            "Accept":
+              "application/json"
           }
         }
       );
@@ -936,7 +341,8 @@ async function getCurrentLive(channelId) {
     } catch {
 
       throw new Error(
-        "CHZZK 라이브 API 응답이 JSON이 아닙니다."
+        "치지직 Live API 응답이 JSON이 아닙니다: " +
+        text.slice(0, 300)
       );
 
     }
@@ -944,7 +350,7 @@ async function getCurrentLive(channelId) {
     if (!response.ok) {
 
       throw new Error(
-        "CHZZK 방송 상태 조회 실패: " +
+        "치지직 방송 상태 조회 실패: " +
         (
           data.message ||
           data.error ||
@@ -958,20 +364,32 @@ async function getCurrentLive(channelId) {
       data.content || data;
 
     const lives =
-      Array.isArray(content.data)
+      Array.isArray(
+        content.data
+      )
         ? content.data
         : [];
 
+    /*
+     * 현재 채널 방송 찾기
+     */
+
     const found =
       lives.find(
-        live =>
-          String(live.channelId) ===
+        (live) =>
+          String(
+            live.channelId
+          ) ===
           String(channelId)
       );
 
     if (found) {
       return found;
     }
+
+    /*
+     * 다음 페이지
+     */
 
     next =
       content.page?.next ||
@@ -980,21 +398,472 @@ async function getCurrentLive(channelId) {
     if (!next) {
       break;
     }
-
   }
 
   return null;
 }
 
-
 /* =========================================
-   방송 상태 확인
+   방송 세션 생성
 ========================================= */
 
-async function checkLiveWatcher(channelId) {
+function createBroadcastSession(
+  req,
+  liveInfo
+) {
+
+  const channelId =
+    safeFileName(
+      getChannelId(req)
+    );
+
+  const broadcastId =
+    String(
+      liveInfo?.liveId ||
+      Date.now()
+    );
+
+  const broadcastDir =
+    path.join(
+      CHAT_DIR,
+      channelId
+    );
+
+  if (!fs.existsSync(
+    broadcastDir
+  )) {
+
+    fs.mkdirSync(
+      broadcastDir,
+      {
+        recursive: true
+      }
+    );
+  }
+
+  const file =
+    path.join(
+      broadcastDir,
+      `${broadcastId}.json`
+    );
+
+  /*
+   * 같은 방송 파일이 이미 있으면
+   * 기존 파일을 이어서 사용
+   */
+
+  if (fs.existsSync(file)) {
+
+    try {
+
+      const existing =
+        JSON.parse(
+          fs.readFileSync(
+            file,
+            "utf8"
+          )
+        );
+
+      return {
+        ...existing,
+        file
+      };
+
+    } catch {
+      // 파일이 깨졌으면 새로 생성
+    }
+  }
+
+  const broadcast = {
+
+    id:
+      broadcastId,
+
+    channelId,
+
+    liveId:
+      liveInfo?.liveId ||
+      null,
+
+    title:
+      liveInfo?.liveTitle ||
+      null,
+
+    startedAt:
+      Date.now(),
+
+    endedAt:
+      null,
+
+    messages: []
+
+  };
+
+  fs.writeFileSync(
+    file,
+    JSON.stringify(
+      broadcast,
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  console.log("");
+  console.log(
+    "===== 방송 세션 생성 ====="
+  );
+  console.log(
+    "방송 ID:",
+    broadcastId
+  );
+  console.log(
+    "방송 제목:",
+    liveInfo?.liveTitle ||
+    "(제목 없음)"
+  );
+  console.log(
+    "저장 파일:",
+    file
+  );
+  console.log(
+    "=========================="
+  );
+
+  return {
+    ...broadcast,
+    file
+  };
+}
+
+/* =========================================
+   방송 채팅 저장
+========================================= */
+
+function saveBroadcastMessage(
+  connection,
+  chat
+) {
+
+  if (
+    !connection ||
+    !connection.broadcast
+  ) {
+    return;
+  }
+
+  const broadcast =
+    connection.broadcast;
+
+  if (!Array.isArray(
+    broadcast.messages
+  )) {
+    broadcast.messages = [];
+  }
+
+  broadcast.messages.push(
+    chat
+  );
+
+  try {
+
+    fs.writeFileSync(
+      broadcast.file,
+      JSON.stringify(
+        broadcast,
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "방송 채팅 저장 오류:",
+      error
+    );
+
+  }
+}
+
+/* =========================================
+   채팅 수집 시작
+========================================= */
+
+async function startChatCollection(
+  req
+) {
+
+  if (!req.session.accessToken) {
+
+    throw new Error(
+      "치지직 로그인이 필요합니다."
+    );
+  }
+
+  const channelId =
+    getChannelId(req);
+
+  if (!channelId) {
+
+    throw new Error(
+      "치지직 채널 ID를 확인할 수 없습니다."
+    );
+  }
+
+  /*
+   * 이미 연결되어 있으면
+   * 중복 연결하지 않음
+   */
+
+  const existing =
+    chatConnections.get(
+      channelId
+    );
+
+  if (
+    existing &&
+    existing.collecting
+  ) {
+
+    console.log(
+      "이미 채팅 수집 중:",
+      channelId
+    );
+
+    return;
+  }
+
+  /*
+   * 현재 방송 정보 확보
+   */
+
+  const live =
+    await getCurrentLive(
+      channelId
+    );
+
+  if (!live) {
+
+    throw new Error(
+      "현재 방송 중이 아닙니다."
+    );
+  }
+
+  /*
+   * 방송 세션 생성
+   */
+
+  const broadcast =
+    createBroadcastSession(
+      req,
+      live
+    );
+
+  console.log("");
+  console.log(
+    "===== 채팅 수집 시작 ====="
+  );
+  console.log(
+    "채널 ID:",
+    channelId
+  );
+  console.log(
+    "방송 ID:",
+    live.liveId
+  );
+
+  /*
+   * 치지직 채팅 클라이언트
+   */
+
+  const chatClient =
+    new ChzzkChat({
+
+      accessToken:
+        req.session.accessToken,
+
+      channelId,
+
+      onChat: (
+        chat
+      ) => {
+
+        console.log(
+          "[후던챗]",
+          chat.nickname,
+          ":",
+          chat.content
+        );
+
+        /*
+         * 방송별 저장
+         */
+
+        const connection =
+          chatConnections.get(
+            channelId
+          );
+
+        saveBroadcastMessage(
+          connection,
+          chat
+        );
+
+        /*
+         * 전체 채팅 저장
+         */
+
+        addMessages(
+          req,
+          [chat]
+        );
+      },
+
+      onStatus: (
+        message
+      ) => {
+
+        console.log(
+          `[후던챗 ${channelId}]`,
+          message
+        );
+
+      }
+
+    });
+
+  /*
+   * 연결 정보 먼저 등록
+   */
+
+  chatConnections.set(
+    channelId,
+    {
+      chatClient,
+      collecting: true,
+      broadcast,
+      liveId:
+        live.liveId
+    }
+  );
+
+  try {
+
+    await chatClient.connect();
+
+    console.log(
+      "✅ 실시간 채팅 연결 완료:",
+      channelId
+    );
+
+  } catch (error) {
+
+    chatConnections.delete(
+      channelId
+    );
+
+    throw error;
+  }
+}
+
+/* =========================================
+   채팅 수집 중지
+========================================= */
+
+function stopChatCollection(
+  req
+) {
+
+  const channelId =
+    getChannelId(req);
+
+  if (!channelId) {
+    return;
+  }
+
+  const connection =
+    chatConnections.get(
+      channelId
+    );
+
+  if (!connection) {
+
+    console.log(
+      "실행 중인 채팅 연결이 없습니다:",
+      channelId
+    );
+
+    return;
+  }
+
+  try {
+
+    connection.chatClient.disconnect();
+
+  } catch (error) {
+
+    console.error(
+      "채팅 연결 종료 오류:",
+      error
+    );
+  }
+
+  /*
+   * 방송 종료 시간 저장
+   */
+
+  if (
+    connection.broadcast
+  ) {
+
+    connection.broadcast.endedAt =
+      Date.now();
+
+    try {
+
+      fs.writeFileSync(
+        connection.broadcast.file,
+        JSON.stringify(
+          connection.broadcast,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+    } catch (error) {
+
+      console.error(
+        "방송 세션 저장 오류:",
+        error
+      );
+    }
+  }
+
+  chatConnections.delete(
+    channelId
+  );
+
+  console.log(
+    "채팅 수집 중지:",
+    channelId
+  );
+}
+
+/* =========================================
+   방송 감시
+========================================= */
+
+async function checkLiveWatcher(
+  channelId
+) {
 
   const watcher =
-    liveWatchers.get(channelId);
+    liveWatchers.get(
+      channelId
+    );
 
   if (!watcher) {
     return;
@@ -1010,10 +879,9 @@ async function checkLiveWatcher(channelId) {
     const isLive =
       !!live;
 
-
-    /* ================================
-       방송 시작
-    ================================= */
+    /*
+     * 방송 시작
+     */
 
     if (
       isLive &&
@@ -1052,10 +920,9 @@ async function checkLiveWatcher(channelId) {
       watcher.liveInfo =
         live;
 
-
-      /* ================================
-         자동 채팅 수집 시작
-      ================================= */
+      /*
+       * 자동 채팅 수집
+       */
 
       try {
 
@@ -1070,20 +937,21 @@ async function checkLiveWatcher(channelId) {
       } catch (error) {
 
         console.error(
-          "방송 시작 후 채팅 수집 실패:",
-          error
+          "❌ 방송 시작 후 채팅 수집 실패:",
+          error.message
         );
 
       }
-
     }
 
-
-    /* ================================
-       방송 중 정보 갱신
-    ================================= */
+    /*
+     * 방송 중 정보 갱신
+     */
 
     if (isLive) {
+
+      watcher.isLive =
+        true;
 
       watcher.liveId =
         live.liveId;
@@ -1093,10 +961,9 @@ async function checkLiveWatcher(channelId) {
 
     }
 
-
-    /* ================================
-       방송 종료
-    ================================= */
+    /*
+     * 방송 종료
+     */
 
     if (
       !isLive &&
@@ -1118,7 +985,6 @@ async function checkLiveWatcher(channelId) {
         "================================="
       );
 
-
       try {
 
         stopChatCollection(
@@ -1128,10 +994,9 @@ async function checkLiveWatcher(channelId) {
       } catch (error) {
 
         console.error(
-          "방송 종료 후 채팅 연결 종료 실패:",
+          "방송 종료 처리 오류:",
           error
         );
-
       }
 
       watcher.isLive =
@@ -1142,7 +1007,6 @@ async function checkLiveWatcher(channelId) {
 
       watcher.liveInfo =
         null;
-
     }
 
   } catch (error) {
@@ -1151,21 +1015,19 @@ async function checkLiveWatcher(channelId) {
       `[방송 상태 확인 오류] ${channelId}:`,
       error.message
     );
-
   }
-
 }
-
 
 /* =========================================
    방송 감시 시작
 ========================================= */
 
-async function startLiveWatcher(req) {
+async function startLiveWatcher(
+  req
+) {
 
   const channelId =
-    req.session.channelId ||
-    req.session.userId;
+    getChannelId(req);
 
   const accessToken =
     req.session.accessToken;
@@ -1175,7 +1037,6 @@ async function startLiveWatcher(req) {
     throw new Error(
       "채널 ID가 없습니다."
     );
-
   }
 
   if (!accessToken) {
@@ -1183,18 +1044,23 @@ async function startLiveWatcher(req) {
     throw new Error(
       "Access Token이 없습니다."
     );
-
   }
 
+  /*
+   * 기존 감시자가 있으면
+   * 세션만 갱신
+   */
 
-  /* ================================
-     이미 감시 중
-  ================================= */
-
-  if (liveWatchers.has(channelId)) {
+  if (
+    liveWatchers.has(
+      channelId
+    )
+  ) {
 
     const watcher =
-      liveWatchers.get(channelId);
+      liveWatchers.get(
+        channelId
+      );
 
     watcher.req =
       req;
@@ -1203,9 +1069,7 @@ async function startLiveWatcher(req) {
       accessToken;
 
     return;
-
   }
-
 
   const watcher = {
 
@@ -1225,12 +1089,10 @@ async function startLiveWatcher(req) {
 
   };
 
-
   liveWatchers.set(
     channelId,
     watcher
   );
-
 
   console.log("");
   console.log(
@@ -1247,19 +1109,17 @@ async function startLiveWatcher(req) {
     "=========================="
   );
 
-
-  /* ================================
-     로그인 직후 즉시 확인
-  ================================= */
+  /*
+   * 로그인 직후 즉시 확인
+   */
 
   await checkLiveWatcher(
     channelId
   );
 
-
-  /* ================================
-     10초마다 확인
-  ================================= */
+  /*
+   * 10초마다 확인
+   */
 
   watcher.timer =
     setInterval(
@@ -1272,18 +1132,20 @@ async function startLiveWatcher(req) {
       },
       10000
     );
-
 }
-
 
 /* =========================================
    방송 감시 중지
 ========================================= */
 
-function stopLiveWatcher(channelId) {
+function stopLiveWatcher(
+  channelId
+) {
 
   const watcher =
-    liveWatchers.get(channelId);
+    liveWatchers.get(
+      channelId
+    );
 
   if (!watcher) {
     return;
@@ -1305,428 +1167,724 @@ function stopLiveWatcher(channelId) {
     "방송 감시 종료:",
     channelId
   );
-
 }
 
-
 /* =========================================
-   방송 세션 생성
+   로그인
 ========================================= */
 
-function createBroadcastSession(
-  req,
-  liveInfo = null
-) {
-
-  const channelId =
-    safeFileName(
-      getChannelId(req)
-    );
-
-  const broadcastId =
-    liveInfo?.liveId ||
-    `${Date.now()}`;
-
-  const broadcastDir =
-    path.join(
-      CHAT_DIR,
-      channelId
-    );
-
-  if (!fs.existsSync(broadcastDir)) {
-
-    fs.mkdirSync(
-      broadcastDir,
-      {
-        recursive: true
-      }
-    );
-
-  }
-
-  const file =
-    path.join(
-      broadcastDir,
-      `${broadcastId}.json`
-    );
-
-  const broadcast = {
-
-    id:
-      broadcastId,
-
-    channelId,
-
-    liveId:
-      liveInfo?.liveId ||
-      null,
-
-    title:
-      liveInfo?.liveTitle ||
-      null,
-
-    startedAt:
-      Date.now(),
-
-    messages: []
-
-  };
-
-  fs.writeFileSync(
-    file,
-    JSON.stringify(
-      broadcast,
-      null,
-      2
-    ),
-    "utf8"
-  );
-
-  const session = {
-    ...broadcast,
-    file
-  };
-
-  currentBroadcast =
-    session;
-
-  console.log("");
-  console.log(
-    "===== 방송 세션 생성 ====="
-  );
-  console.log(
-    "방송 ID:",
-    broadcastId
-  );
-  console.log(
-    "저장 파일:",
-    file
-  );
-  console.log(
-    "=========================="
-  );
-
-  return session;
-}
-
-
-/* =========================================
-   방송 채팅 저장
-========================================= */
-
-function saveBroadcastMessages(
-  messages
-) {
-
-  if (!currentBroadcast) {
-    return;
-  }
-
-  if (!Array.isArray(messages)) {
-    return;
-  }
-
-  currentBroadcast.messages.push(
-    ...messages
-  );
-
-  try {
-
-    fs.writeFileSync(
-      currentBroadcast.file,
-      JSON.stringify(
-        currentBroadcast,
-        null,
-        2
-      ),
-      "utf8"
-    );
-
-  } catch (error) {
-
-    console.error(
-      "방송 채팅 저장 오류:",
-      error
-    );
-
-  }
-
-}
-
-
-/* =========================================
-   실시간 채팅 수집 시작
-========================================= */
-
-async function startChatCollection(req) {
-
-  if (!req.session.accessToken) {
-
-    throw new Error(
-      "치지직 로그인이 필요합니다."
-    );
-
-  }
-
-  const channelId =
-    req.session.channelId ||
-    req.session.userId;
-
-  if (!channelId) {
-
-    throw new Error(
-      "치지직 채널 ID를 확인할 수 없습니다."
-    );
-
-  }
-
-
-  const watcher =
-    liveWatchers.get(
-      channelId
-    );
-
-  const liveInfo =
-    watcher?.liveInfo ||
-    null;
-
-
-  /* ================================
-     이미 연결되어 있으면 종료
-  ================================= */
-
-  if (chatConnections.has(channelId)) {
-
-    const existing =
-      chatConnections.get(channelId);
-
-    if (existing.collecting) {
-
-      return;
-
-    }
-
-  }
-
-
-  console.log("");
-  console.log(
-    "===== 채팅 수집 시작 ====="
-  );
-  console.log(
-    "채널 ID:",
-    channelId
-  );
-
-
-  /* ================================
-     방송 세션 생성
-  ================================= */
-
-  const broadcast =
-    createBroadcastSession(
-      req,
-      liveInfo
-    );
-
-
-  /* ================================
-     치지직 채팅 클라이언트
-  ================================= */
-
-  const chatClient =
-    new ChzzkChat({
-
-      accessToken:
-        req.session.accessToken,
-
-      channelId,
-
-      onChat: (chat) => {
-
-        console.log(
-          "[후던챗 채팅 저장]",
-          chat.nickname,
-          chat.content
-        );
-
-
-        /*
-         * 방송별 저장
-         */
-
-        saveBroadcastMessages([
-          chat
-        ]);
-
-
-        /*
-         * 기존 전체 채팅 저장
-         */
-
-        addMessages(
-          req,
-          [chat]
-        );
-
-      },
-
-      onStatus: (message) => {
-
-        console.log(
-          `[후던챗 ${channelId}]`,
-          message
-        );
-
-      }
-
-    });
-
-
-  chatConnections.set(
-    channelId,
-    {
-      chatClient,
-      collecting: true,
-      broadcast
-    }
-  );
-
-
-  try {
-
-    await chatClient.connect();
-
-    console.log(
-      "✅ 실시간 채팅 연결 완료:",
-      channelId
-    );
-
-  } catch (error) {
-
-    chatConnections.delete(
-      channelId
-    );
-
-    throw error;
-
-  }
-
-}
-
-
-/* =========================================
-   실시간 채팅 수집 중지
-========================================= */
-
-function stopChatCollection(req) {
-
-  const channelId =
-    req.session.channelId ||
-    req.session.userId;
-
-  if (!channelId) {
-    return;
-  }
-
-  const connection =
-    chatConnections.get(
-      channelId
-    );
-
-  if (!connection) {
-
-    console.log(
-      "실행 중인 채팅 연결이 없습니다:",
-      channelId
-    );
-
-    return;
-
-  }
-
-
-  /* ================================
-     채팅 연결 종료
-  ================================= */
-
-  try {
-
-    connection.chatClient.disconnect();
-
-  } catch (error) {
-
-    console.error(
-      "채팅 연결 종료 오류:",
-      error
-    );
-
-  }
-
-
-  /* ================================
-     방송 종료 시간 저장
-  ================================= */
-
-  if (connection.broadcast) {
-
-    connection.broadcast.endedAt =
-      Date.now();
+app.get(
+  "/auth/login",
+  (req, res) => {
 
     try {
 
-      fs.writeFileSync(
-        connection.broadcast.file,
-        JSON.stringify(
-          connection.broadcast,
-          null,
-          2
-        ),
-        "utf8"
+      const clientId =
+        process.env.CHZZK_CLIENT_ID;
+
+      const clientSecret =
+        process.env.CHZZK_CLIENT_SECRET;
+
+      const redirectUri =
+        process.env.CHZZK_REDIRECT_URI ||
+        `http://localhost:${PORT}/auth/callback`;
+
+      if (!clientId) {
+
+        return res.status(500).send(
+          "CHZZK_CLIENT_ID가 .env에 없습니다."
+        );
+      }
+
+      if (!clientSecret) {
+
+        return res.status(500).send(
+          "CHZZK_CLIENT_SECRET이 .env에 없습니다."
+        );
+      }
+
+      const state =
+        randomState();
+
+      req.session.oauthState =
+        state;
+
+      const params =
+        new URLSearchParams({
+
+          response_type:
+            "code",
+
+          clientId,
+
+          redirectUri,
+
+          state
+
+        });
+
+      const loginUrl =
+        `https://chzzk.naver.com/account-interlock?${params.toString()}`;
+
+      res.redirect(
+        loginUrl
       );
 
     } catch (error) {
 
       console.error(
-        "방송 세션 저장 오류:",
+        "치지직 로그인 시작 오류:",
         error
       );
 
+      res.status(500).send(
+        `로그인 시작 실패: ${escapeHtml(error.message)}`
+      );
     }
-
   }
-
-
-  chatConnections.delete(
-    channelId
-  );
-
-
-  /*
-   * 현재 방송 세션 정리
-   */
-
-  if (
-    currentBroadcast?.channelId ===
-    safeFileName(channelId)
-  ) {
-
-    currentBroadcast =
-      null;
-
-  }
-
-
-  console.log(
-    "채팅 수집 중지:",
-    channelId
-  );
-
-}
-
+);
 
 /* =========================================
-   채팅 수집 시작 API
+   로그인 콜백
+========================================= */
+
+app.get(
+  "/auth/callback",
+  async (req, res) => {
+
+    try {
+
+      const code =
+        String(
+          req.query.code || ""
+        );
+
+      const state =
+        String(
+          req.query.state || ""
+        );
+
+      if (!code) {
+
+        throw new Error(
+          "authorization code를 받지 못했습니다."
+        );
+      }
+
+      if (!state) {
+
+        throw new Error(
+          "state를 받지 못했습니다."
+        );
+      }
+
+      if (
+        !req.session.oauthState ||
+        state !==
+          req.session.oauthState
+      ) {
+
+        throw new Error(
+          "로그인 상태 확인에 실패했습니다."
+        );
+      }
+
+      const clientId =
+        process.env.CHZZK_CLIENT_ID;
+
+      const clientSecret =
+        process.env.CHZZK_CLIENT_SECRET;
+
+      const redirectUri =
+        process.env.CHZZK_REDIRECT_URI ||
+        `http://localhost:${PORT}/auth/callback`;
+
+      const response =
+        await fetch(
+          "https://openapi.chzzk.naver.com/auth/v1/token",
+          {
+
+            method:
+              "POST",
+
+            headers: {
+
+              "Content-Type":
+                "application/json"
+
+            },
+
+            body:
+              JSON.stringify({
+
+                grantType:
+                  "authorization_code",
+
+                clientId,
+
+                clientSecret,
+
+                code,
+
+                state
+
+              })
+
+          }
+        );
+
+      const tokenText =
+        await response.text();
+
+      let token;
+
+      try {
+
+        token =
+          JSON.parse(
+            tokenText
+          );
+
+      } catch {
+
+        throw new Error(
+          "토큰 API 응답이 JSON이 아닙니다."
+        );
+      }
+
+      if (!response.ok) {
+
+        throw new Error(
+          "토큰 발급 실패: " +
+          (
+            token.message ||
+            token.error ||
+            JSON.stringify(token)
+          )
+        );
+      }
+
+      const content =
+        token.content ||
+        token;
+
+      if (!content.accessToken) {
+
+        throw new Error(
+          "accessToken을 받지 못했습니다."
+        );
+      }
+
+      req.session.accessToken =
+        content.accessToken;
+
+      req.session.refreshToken =
+        content.refreshToken ||
+        null;
+
+      delete req.session.oauthState;
+
+      /*
+       * 내 계정 정보
+       */
+
+      const meResponse =
+        await fetch(
+          "https://openapi.chzzk.naver.com/open/v1/users/me",
+          {
+
+            headers: {
+
+              Authorization:
+                "Bearer " +
+                req.session.accessToken
+
+            }
+
+          }
+        );
+
+      const meData =
+        await meResponse.json();
+
+      if (!meResponse.ok) {
+
+        throw new Error(
+          meData.message ||
+          "사용자 정보를 가져오지 못했습니다."
+        );
+      }
+
+      const me =
+        meData.content ||
+        meData;
+
+      /*
+       * 중요:
+       * channelId를 최우선으로 사용
+       */
+
+      req.session.channelId =
+        me.channelId ||
+        null;
+
+      req.session.userId =
+        me.userId ||
+        me.id ||
+        null;
+
+      if (!req.session.channelId) {
+
+        throw new Error(
+          "치지직 channelId를 가져오지 못했습니다."
+        );
+      }
+
+      console.log(
+        "로그인 channelId:",
+        req.session.channelId
+      );
+
+      /*
+       * 방송 감시 시작
+       */
+
+      await startLiveWatcher(
+        req
+      );
+
+      res.redirect("/");
+
+    } catch (error) {
+
+      console.error(
+        "치지직 로그인 오류:",
+        error
+      );
+
+      res.status(400).send(`
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>로그인 실패</title>
+<style>
+body{
+  background:#080808;
+  color:#eee;
+  font-family:Arial,sans-serif;
+  padding:40px;
+}
+.box{
+  max-width:600px;
+  margin:80px auto;
+  border:1px solid #333;
+  padding:30px;
+  background:#111;
+  border-radius:12px;
+}
+h2{
+  color:#ff6262;
+}
+pre{
+  white-space:pre-wrap;
+  word-break:break-word;
+  color:#aaa;
+}
+a{
+  color:#00d564;
+}
+</style>
+</head>
+<body>
+<div class="box">
+<h2>로그인 실패</h2>
+<pre>${escapeHtml(
+        error.message
+      )}</pre>
+<a href="/">후던챗으로 돌아가기</a>
+</div>
+</body>
+</html>
+      `);
+    }
+  }
+);
+
+/* =========================================
+   내 계정
+========================================= */
+
+app.get(
+  "/api/me",
+  async (req, res) => {
+
+    try {
+
+      if (!req.session.accessToken) {
+
+        return res.json({
+          loggedIn: false
+        });
+      }
+
+      const response =
+        await fetch(
+          "https://openapi.chzzk.naver.com/open/v1/users/me",
+          {
+
+            headers: {
+
+              Authorization:
+                "Bearer " +
+                req.session.accessToken
+
+            }
+
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+
+        return res.json({
+
+          loggedIn: false,
+
+          error:
+            data.message ||
+            "치지직 API 오류"
+
+        });
+      }
+
+      const me =
+        data.content ||
+        data;
+
+      req.session.channelId =
+        me.channelId ||
+        null;
+
+      req.session.userId =
+        me.userId ||
+        me.id ||
+        null;
+
+      /*
+       * 기존 세션이 있는데
+       * 감시자가 없다면 다시 시작
+       */
+
+      if (
+        req.session.channelId &&
+        !liveWatchers.has(
+          req.session.channelId
+        )
+      ) {
+
+        await startLiveWatcher(
+          req
+        );
+      }
+
+      res.json({
+
+        loggedIn: true,
+
+        me
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "내 계정 확인 오류:",
+        error
+      );
+
+      res.json({
+
+        loggedIn: false,
+
+        error:
+          error.message
+
+      });
+    }
+  }
+);
+
+/* =========================================
+   채팅 정보
+========================================= */
+
+app.get(
+  "/api/chat/info",
+  (req, res) => {
+
+    try {
+
+      if (!req.session.accessToken) {
+
+        return res.status(401).json({
+
+          error:
+            "로그인이 필요합니다."
+
+        });
+      }
+
+      const messages =
+        loadSavedMessages(req);
+
+      if (
+        messages.length ===
+        0
+      ) {
+
+        return res.json({
+
+          count: 0,
+
+          firstTimestamp:
+            null,
+
+          lastTimestamp:
+            null
+
+        });
+      }
+
+      const timestamps =
+        messages
+          .map(
+            (message) =>
+              Number(
+                message.timestamp
+              )
+          )
+          .filter(
+            (timestamp) =>
+              Number.isFinite(
+                timestamp
+              )
+          );
+
+      res.json({
+
+        count:
+          messages.length,
+
+        firstTimestamp:
+          timestamps.length
+            ? Math.min(
+                ...timestamps
+              )
+            : null,
+
+        lastTimestamp:
+          timestamps.length
+            ? Math.max(
+                ...timestamps
+              )
+            : null
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "채팅 내역 조회 오류:",
+        error
+      );
+
+      res.status(500).json({
+
+        error:
+          "채팅 내역을 불러오지 못했습니다."
+
+      });
+    }
+  }
+);
+
+/* =========================================
+   채팅 전체 조회
+========================================= */
+
+app.get(
+  "/api/chat/history",
+  (req, res) => {
+
+    try {
+
+      if (!req.session.accessToken) {
+
+        return res.status(401).json({
+
+          error:
+            "로그인이 필요합니다."
+
+        });
+      }
+
+      const messages =
+        loadSavedMessages(req);
+
+      res.json({
+
+        messages,
+
+        count:
+          messages.length
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "채팅 기록 조회 오류:",
+        error
+      );
+
+      res.status(500).json({
+
+        error:
+          "채팅 기록을 불러오지 못했습니다."
+
+      });
+    }
+  }
+);
+
+/* =========================================
+   채팅 저장 API
+========================================= */
+
+app.post(
+  "/api/chat/save",
+  (req, res) => {
+
+    try {
+
+      if (!req.session.accessToken) {
+
+        return res.status(401).json({
+
+          error:
+            "로그인이 필요합니다."
+
+        });
+      }
+
+      const incoming =
+        req.body.messages;
+
+      if (!Array.isArray(
+        incoming
+      )) {
+
+        return res.status(400).json({
+
+          error:
+            "messages 배열이 필요합니다."
+
+        });
+      }
+
+      addMessages(
+        req,
+        incoming
+      );
+
+      const messages =
+        loadSavedMessages(req);
+
+      res.json({
+
+        success: true,
+
+        count:
+          messages.length
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "채팅 저장 오류:",
+        error
+      );
+
+      res.status(500).json({
+
+        error:
+          "채팅 저장에 실패했습니다."
+
+      });
+    }
+  }
+);
+
+/* =========================================
+   채팅 삭제
+========================================= */
+
+app.delete(
+  "/api/chat/history",
+  (req, res) => {
+
+    try {
+
+      if (!req.session.accessToken) {
+
+        return res.status(401).json({
+
+          error:
+            "로그인이 필요합니다."
+
+        });
+      }
+
+      const file =
+        getChatFile(req);
+
+      if (
+        fs.existsSync(file)
+      ) {
+
+        fs.unlinkSync(file);
+
+      }
+
+      res.json({
+
+        success: true
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "채팅 삭제 오류:",
+        error
+      );
+
+      res.status(500).json({
+
+        error:
+          "채팅 기록 삭제에 실패했습니다."
+
+      });
+    }
+  }
+);
+
+/* =========================================
+   방송 수집 시작 API
 ========================================= */
 
 app.post(
@@ -1738,20 +1896,35 @@ app.post(
       if (!req.session.accessToken) {
 
         return res.status(401).json({
+
+          success: false,
+
+          loggedIn: false,
+
           error:
             "치지직 로그인이 필요합니다."
-        });
 
+        });
+      }
+
+      const channelId =
+        getChannelId(req);
+
+      if (!channelId) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          error:
+            "채널 ID를 확인할 수 없습니다."
+
+        });
       }
 
       /*
-       * 수동 시작 전에
-       * 현재 방송 정보도 확인
+       * 현재 방송 확인
        */
-
-      const channelId =
-        req.session.channelId ||
-        req.session.userId;
 
       const live =
         await getCurrentLive(
@@ -1761,25 +1934,45 @@ app.post(
       if (!live) {
 
         return res.status(400).json({
+
           success: false,
+
           collecting: false,
+
           isLive: false,
+
           error:
             "현재 방송 중이 아닙니다."
-        });
 
+        });
       }
 
       /*
-       * 감시자의 방송 정보 갱신
+       * 감시자 정보 갱신
        */
 
-      const watcher =
+      let watcher =
         liveWatchers.get(
           channelId
         );
 
+      if (!watcher) {
+
+        await startLiveWatcher(
+          req
+        );
+
+        watcher =
+          liveWatchers.get(
+            channelId
+          );
+
+      }
+
       if (watcher) {
+
+        watcher.req =
+          req;
 
         watcher.isLive =
           true;
@@ -1791,6 +1984,10 @@ app.post(
           live;
 
       }
+
+      /*
+       * 채팅 시작
+       */
 
       await startChatCollection(
         req
@@ -1807,10 +2004,16 @@ app.post(
         live: {
 
           liveId:
-            live.liveId || null,
+            live.liveId ||
+            null,
 
           title:
-            live.liveTitle || null
+            live.liveTitle ||
+            null,
+
+          channelId:
+            live.channelId ||
+            channelId
 
         }
 
@@ -1832,39 +2035,54 @@ app.post(
           "채팅 수집을 시작할 수 없습니다."
 
       });
-
     }
-
   }
 );
 
-
 /* =========================================
-   채팅 수집 중지 API
+   방송 수집 중지 API
 ========================================= */
 
 app.post(
   "/api/live/stop",
   (req, res) => {
 
-    stopChatCollection(
-      req
-    );
+    try {
 
-    res.json({
+      stopChatCollection(
+        req
+      );
 
-      success: true,
+      res.json({
 
-      collecting: false
+        success: true,
 
-    });
+        collecting: false
 
+      });
+
+    } catch (error) {
+
+      console.error(
+        "채팅 중지 오류:",
+        error
+      );
+
+      res.status(500).json({
+
+        success: false,
+
+        error:
+          error.message ||
+          "채팅 수집 중지에 실패했습니다."
+
+      });
+    }
   }
 );
 
-
 /* =========================================
-   현재 방송 상태 API
+   ⭐ 현재 방송 상태 API
 ========================================= */
 
 app.get(
@@ -1872,6 +2090,10 @@ app.get(
   async (req, res) => {
 
     try {
+
+      /*
+       * 로그인 확인
+       */
 
       if (!req.session.accessToken) {
 
@@ -1887,14 +2109,14 @@ app.get(
             "로그인이 필요합니다."
 
         });
-
       }
 
+      /*
+       * channelId 확인
+       */
 
       const channelId =
-        req.session.channelId ||
-        req.session.userId;
-
+        getChannelId(req);
 
       if (!channelId) {
 
@@ -1910,9 +2132,7 @@ app.get(
             "채널 ID를 확인할 수 없습니다."
 
         });
-
       }
-
 
       /*
        * 현재 방송 확인
@@ -1923,13 +2143,11 @@ app.get(
           channelId
         );
 
-
       const isLive =
         !!live;
 
-
       /*
-       * 현재 채팅 연결 확인
+       * 채팅 연결 확인
        */
 
       const connection =
@@ -1937,12 +2155,11 @@ app.get(
           channelId
         );
 
-      const collectingNow =
+      const collecting =
         !!connection?.collecting;
 
-
       /*
-       * 방송 감시 정보
+       * 감시자 확인
        */
 
       const watcher =
@@ -1950,10 +2167,26 @@ app.get(
           channelId
         );
 
-
       /*
-       * 실제 API 응답
+       * 방송 중이면 감시자 정보도
+       * 최신 상태로 갱신
        */
+
+      if (
+        live &&
+        watcher
+      ) {
+
+        watcher.isLive =
+          true;
+
+        watcher.liveId =
+          live.liveId;
+
+        watcher.liveInfo =
+          live;
+
+      }
 
       res.json({
 
@@ -1963,8 +2196,7 @@ app.get(
 
         isLive,
 
-        collecting:
-          collectingNow,
+        collecting,
 
         watcher:
           !!watcher,
@@ -1983,7 +2215,19 @@ app.get(
 
                 channelId:
                   live.channelId ||
-                  channelId
+                  channelId,
+
+                channelName:
+                  live.channelName ||
+                  null,
+
+                concurrentUserCount:
+                  live.concurrentUserCount ||
+                  0,
+
+                openDate:
+                  live.openDate ||
+                  null
 
               }
             : null
@@ -2010,15 +2254,12 @@ app.get(
           "방송 상태를 확인할 수 없습니다."
 
       });
-
     }
-
   }
 );
 
-
 /* =========================================
-   저장된 채팅 가져오기
+   저장된 실시간 채팅
 ========================================= */
 
 app.get(
@@ -2035,15 +2276,13 @@ app.get(
             "로그인이 필요합니다."
 
         });
-
       }
 
       const messages =
         loadSavedMessages(req);
 
       const channelId =
-        req.session.channelId ||
-        req.session.userId;
+        getChannelId(req);
 
       const connection =
         chatConnections.get(
@@ -2075,12 +2314,9 @@ app.get(
           "채팅을 불러오지 못했습니다."
 
       });
-
     }
-
   }
 );
-
 
 /* =========================================
    서버 실행
@@ -2111,8 +2347,12 @@ app.listen(
     );
 
     console.log(
-      "================================="
+      "방송 감시:",
+      "10초"
     );
 
+    console.log(
+      "================================="
+    );
   }
 );
