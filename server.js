@@ -434,51 +434,39 @@ async function resolveChannelId(
 ========================================================= */
 
 async function getCurrentLive(
-  channelId
+  channelId,
+  accessToken = null
 ) {
 
   if (!channelId) {
-
     return null;
-
   }
-
 
   const url =
     `${CHZZK_API}/open/v1/lives?channelId=${encodeURIComponent(
       channelId
     )}`;
 
-
   const data =
     await chzzkFetch(
-      url
+      url,
+      accessToken
     );
-
 
   const content =
     data?.content;
 
+  if (Array.isArray(content)) {
 
-  if (
-    Array.isArray(content)
-  ) {
-
-    if (
-      content.length === 0
-    ) {
-
+    if (content.length === 0) {
       return null;
-
     }
-
 
     return normalizeLive(
       content[0]
     );
 
   }
-
 
   if (
     content &&
@@ -491,9 +479,7 @@ async function getCurrentLive(
 
   }
 
-
   return null;
-
 }
 
 
@@ -837,9 +823,10 @@ async function checkLiveWatcher(
   try {
 
     const live =
-      await getCurrentLive(
-        channelId
-      );
+  await getCurrentLive(
+    channelId,
+    watcher.accessToken
+  );
 
 
     const isLive =
@@ -1781,11 +1768,11 @@ app.get(
         getChannelId(req);
 
 
-      const live =
-        await getCurrentLive(
-          channelId
-        );
-
+    const live =
+  await getCurrentLive(
+    channelId,
+    getAccessToken(req)
+  );
 
       res.json({
 
