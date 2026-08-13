@@ -1,291 +1,427 @@
-import { io } from "socket.io-client";
+import io from "socket.io-client";
+
 
 const CHZZK_API =
   "https://openapi.chzzk.naver.com";
 
+
 export class ChzzkChat {
 
-  constructor({
-    accessToken,
-    channelId,
-    onChat,
-    onStatus
-  }) {
+  constructor(options = {}) {
 
-    this.accessToken = accessToken;
-    this.channelId = channelId;
+    this.accessToken =
+      options.accessToken || "";
+
+    this.channelId =
+      options.channelId || "";
 
     this.onChat =
-      typeof onChat === "function"
-        ? onChat
-        : () => {};
+      options.onChat ||
+      (() => {});
 
     this.onStatus =
-      typeof onStatus === "function"
-        ? onStatus
-        : () => {};
+      options.onStatus ||
+      (() => {});
 
-    this.socket = null;
-    this.sessionKey = null;
+    this.socket =
+      null;
 
-    this.connected = false;
-    this.subscribed = false;
+    this.sessionKey =
+      null;
 
-    this.stopped = false;
-    this.reconnecting = false;
+    this.connected =
+      false;
 
-    this.retryTimer = null;
-    this.retryCount = 0;
+    this.subscribed =
+      false;
+
+    this.closed =
+      false;
+
   }
 
-  status(message) {
-    console.log("[치지직]", message);
 
-    try {
-      this.onStatus(message);
-    } catch {}
-  }
+  async connect() {
 
-  async createSession() {
+    if (!this.accessToken) {
+
+      throw new Error(
+        "Access Token이 없습니다."
+      );
+
+    }
+
+
+    if (!this.channelId) {
+
+      throw new Error(
+        "Channel ID가 없습니다."
+      );
+
+    }
+
+
+    this.closed =
+      false;
+
+
+    this.onStatus(
+      "세션 URL 요청 중..."
+    );
+
+
+    /*
+     * Access Token 인증으로
+     * 세션 URL 발급
+     */
 
     const response =
       await fetch(
         `${CHZZK_API}/open/v1/sessions/auth`,
         {
+
           method: "GET",
+
           headers: {
+
+            Accept:
+              "application/json",
+
             Authorization:
               `Bearer ${this.accessToken}`
+
           }
+
         }
       );
+
 
     const text =
       await response.text();
 
+
     let data;
 
+
     try {
-      data = JSON.parse(text);
+
+      data =
+        JSON.parse(text);
+
     } catch {
+
       throw new Error(
-        "치지직 세션 API 응답이 JSON이 아닙니다."
+        `세션 URL 응답 파싱 실패: ${text}`
       );
+
     }
+
 
     if (!response.ok) {
+
       throw new Error(
-        "치지직 세션 생성 실패: " +
-        (
-          data.message ||
-          data.error ||
-          JSON.stringify(data)
-        )
+        data?.message ||
+        data?.error ||
+        `세션 URL 요청 실패: HTTP ${response.status}`
       );
+
     }
 
-    const content =
-      data.content || data;
 
-    if (!content.url) {
+    const sessionUrl =
+      data?.content?.url ||
+      data?.data?.url ||
+      data?.url;
+
+
+    if (!sessionUrl) {
+
       throw new Error(
         "치지직 세션 URL을 받지 못했습니다."
       );
+
     }
 
-    return content.url;
+
+    this.onStatus(
+      "Socket 연결 중..."
+    );
+
+
+    /*
+     * Socket.IO 연결
+     */
+
+    await this.connectSocket(
+      sessionUrl
+    );
+
   }
 
-  async connect() {
 
-    this.stopped = false;
+  connectSocket(
+    sessionUrl
+  ) {
 
-    if (!this.accessToken) {
-      throw new Error(
-        "Access Token이 없습니다."
-      );
-    }
+    return new Promise(
+      (
+        resolve,
+        reject
+      ) => {
 
-    if (!this.channelId) {
-      throw new Error(
-        "채널 ID가 없습니다."
-      );
-    }
+        let resolved =
+          false;
 
-    this.clearRetryTimer();
+        let timer;
 
-    if (this.socket) {
-      try {
-        this.socket.removeAllListeners();
-        this.socket.disconnect();
-      } catch {}
 
-      this.socket = null;
-    }
+        const socketOptions = {
 
-    this.connected = false;
-    this.subscribed = false;
-    this.sessionKey = null;
+          reconnection:
+            false,
 
-    return this.connectNewSession();
-  }
+          forceNew:
+            true,
 
-  async connectNewSession() {
+          timeout:
+            5000,
 
-    if (this.stopped) {
-      return false;
-    }
+          transports:
+            ["websocket"]
 
-    try {
+        };
 
-      this.status(
-        "치지직 채팅 세션을 새로 연결하는 중..."
-      );
 
-      const sessionUrl =
-        await this.createSession();
+        const socket =
+          io(
+            sessionUrl,
+            socketOptions
+          );
 
-      if (this.stopped) {
-        return false;
-      }
 
-      this.status(
-        "치지직 채팅 서버에 연결하는 중..."
-      );
+        this.socket =
+          socket;
 
-      const socket =
-        io.connect(
-          sessionUrl,
-          {
-            reconnection: false,
-            forceNew: true,
 
-            connectTimeout: 10000,
+        timer =
+          setTimeout(
+            () => {
 
-            transports: [
-              "websocket"
-            ]
+              if (!resolved) {
+
+                resolved =
+                  true;
+
+                try {
+
+                  socket.disconnect();
+
+                } catch {}
+
+                reject(
+                  new Error(
+                    "치지직 채팅 Socket 연결 시간이 초과되었습니다."
+                  )
+                );
+
+              }
+
+            },
+            10000
+          );
+
+
+        socket.on(
+          "connect",
+          () => {
+
+            this.connected =
+              true;
+
+
+            this.onStatus(
+              "Socket 연결 완료"
+            );
+
           }
         );
 
-      this.socket = socket;
 
-      socket.on(
-        "connect",
-        () => {
+        /*
+         * SYSTEM
+         */
 
-          this.connected = true;
-          this.retryCount = 0;
-
-          this.status(
-            "치지직 채팅 서버 연결 완료"
-          );
-
-        }
-      );
-
-      socket.on(
-        "SYSTEM",
-        async (message) => {
-
-          try {
+        socket.on(
+          "SYSTEM",
+          async raw => {
 
             const data =
-              typeof message === "string"
-                ? JSON.parse(message)
-                : message;
+              this.normalizeData(
+                raw
+              );
+
 
             console.log(
-              "[치지직 SYSTEM]",
-              data
+              "CHZZK SYSTEM:",
+              JSON.stringify(
+                data
+              )
             );
 
-            /*
-             * 새 세션 연결 완료
-             */
+
             if (
-              data.type === "connected" &&
-              data.data?.sessionKey
+              data?.type ===
+              "connected"
             ) {
 
               this.sessionKey =
-                data.data.sessionKey;
+                data?.data?.sessionKey ||
+                null;
 
-              this.status(
-                "채팅 세션 연결 완료"
-              );
 
-              await this.subscribeChat();
+              if (!this.sessionKey) {
+
+                if (!resolved) {
+
+                  resolved =
+                    true;
+
+                  clearTimeout(
+                    timer
+                  );
+
+                  reject(
+                    new Error(
+                      "Socket 연결은 되었지만 sessionKey를 받지 못했습니다."
+                    )
+                  );
+
+                }
+
+                return;
+
+              }
+
+
+              try {
+
+                await this.subscribeChat();
+
+
+                this.subscribed =
+                  true;
+
+
+                this.onStatus(
+                  "실시간 채팅 구독 완료"
+                );
+
+
+                if (!resolved) {
+
+                  resolved =
+                    true;
+
+                  clearTimeout(
+                    timer
+                  );
+
+                  resolve();
+
+                }
+
+              } catch (error) {
+
+                if (!resolved) {
+
+                  resolved =
+                    true;
+
+                  clearTimeout(
+                    timer
+                  );
+
+                  reject(
+                    error
+                  );
+
+                }
+
+              }
+
             }
 
-            /*
-             * 채팅 구독 완료
-             */
+
             if (
-              data.type === "subscribed" &&
-              data.data?.eventType === "CHAT"
+              data?.type ===
+              "subscribed"
             ) {
 
-              this.subscribed = true;
+              if (
+                data?.data?.eventType ===
+                "CHAT"
+              ) {
 
-              this.status(
-                "실시간 채팅 수집 시작"
-              );
+                this.subscribed =
+                  true;
+
+              }
+
             }
 
-            /*
-             * 권한 취소
-             */
+
             if (
-              data.type === "revoked"
+              data?.type ===
+              "revoked"
             ) {
 
-              this.status(
+              this.onStatus(
                 "치지직 채팅 권한이 취소되었습니다."
               );
 
-              this.scheduleReconnect();
             }
 
-          } catch (error) {
-
-            console.error(
-              "SYSTEM 메시지 처리 오류:",
-              error
-            );
-
           }
+        );
 
-        }
-      );
 
-      socket.on(
-        "CHAT",
-        (message) => {
+        /*
+         * 실제 채팅
+         */
 
-          try {
+        socket.on(
+          "CHAT",
+          raw => {
 
             const data =
-              typeof message === "string"
-                ? JSON.parse(message)
-                : message;
+              this.normalizeData(
+                raw
+              );
 
-            const chat = {
+
+            if (!data) {
+
+              return;
+
+            }
+
+
+            const message = {
 
               id:
-                data.messageId ||
-                `${data.channelId}-${data.messageTime}-${data.senderChannelId}-${data.content}`,
+                [
+                  data.channelId,
+                  data.senderChannelId,
+                  data.messageTime,
+                  data.content
+                ].join("-"),
 
               channelId:
                 data.channelId ||
                 this.channelId,
 
-              senderChannelId:
-                data.senderChannelId ||
-                null,
-
               nickname:
-                data.profile?.nickname ||
+                data?.profile?.nickname ||
                 "알 수 없음",
 
               content:
@@ -293,224 +429,232 @@ export class ChzzkChat {
                 "",
 
               timestamp:
-                data.messageTime ||
-                Date.now()
+                Number(
+                  data.messageTime ||
+                  Date.now()
+                ),
+
+              senderChannelId:
+                data.senderChannelId ||
+                null
+
             };
 
-            this.onChat(chat);
 
-          } catch (error) {
+            this.onChat(
+              message
+            );
+
+          }
+        );
+
+
+        socket.on(
+          "disconnect",
+          reason => {
+
+            this.connected =
+              false;
+
+            this.subscribed =
+              false;
+
+
+            this.onStatus(
+              `Socket 연결 종료: ${reason || "unknown"}`
+            );
+
+
+            /*
+             * 의도적인 종료가 아니라면
+             * 현재 연결 실패 처리
+             */
+
+            if (
+              !this.closed &&
+              !resolved
+            ) {
+
+              resolved =
+                true;
+
+              clearTimeout(
+                timer
+              );
+
+              reject(
+                new Error(
+                  `Socket 연결 종료: ${reason || "unknown"}`
+                )
+              );
+
+            }
+
+          }
+        );
+
+
+        socket.on(
+          "connect_error",
+          error => {
 
             console.error(
-              "CHAT 메시지 처리 오류:",
+              "CHZZK Socket 오류:",
               error
             );
 
+
+            if (!resolved) {
+
+              resolved =
+                true;
+
+              clearTimeout(
+                timer
+              );
+
+              reject(
+                new Error(
+                  `치지직 Socket 연결 실패: ${
+                    error?.message ||
+                    "unknown"
+                  }`
+                )
+              );
+
+            }
+
           }
+        );
 
-        }
-      );
 
-      socket.on(
-        "disconnect",
-        (reason) => {
+        socket.connect();
 
-          this.connected = false;
-          this.subscribed = false;
+      }
+    );
 
-          console.log(
-            "치지직 채팅 연결 종료:",
-            reason
-          );
-
-          if (!this.stopped) {
-
-            this.status(
-              `채팅 연결 종료: ${reason}`
-            );
-
-            this.scheduleReconnect();
-          }
-
-        }
-      );
-
-      socket.on(
-        "connect_error",
-        (error) => {
-
-          this.connected = false;
-          this.subscribed = false;
-
-          console.error(
-            "치지직 채팅 연결 오류:",
-            error
-          );
-
-          if (!this.stopped) {
-
-            this.status(
-              "치지직 채팅 연결 오류 → 자동 재연결"
-            );
-
-            this.scheduleReconnect();
-          }
-
-        }
-      );
-
-      return true;
-
-    } catch (error) {
-
-      console.error(
-        "새 채팅 세션 연결 실패:",
-        error
-      );
-
-      this.scheduleReconnect();
-
-      return false;
-    }
   }
+
 
   async subscribeChat() {
 
     if (!this.sessionKey) {
+
       throw new Error(
         "sessionKey가 없습니다."
       );
+
     }
 
-    if (this.stopped) {
-      return;
-    }
+
+    this.onStatus(
+      "CHAT 이벤트 구독 요청..."
+    );
+
+
+    const url =
+      new URL(
+        `${CHZZK_API}/open/v1/sessions/events/subscribe/chat`
+      );
+
+
+    url.searchParams.set(
+      "sessionKey",
+      this.sessionKey
+    );
+
 
     const response =
       await fetch(
-        `${CHZZK_API}/open/v1/sessions/events/subscribe/chat?sessionKey=${encodeURIComponent(this.sessionKey)}`,
+        url,
         {
+
           method: "POST",
 
           headers: {
-            Authorization:
-              `Bearer ${this.accessToken}`,
 
-            "Content-Type":
-              "application/json"
+            Accept:
+              "application/json",
+
+            Authorization:
+              `Bearer ${this.accessToken}`
+
           }
+
         }
       );
+
 
     const text =
       await response.text();
 
-    let data = {};
-
-    try {
-      if (text) {
-        data = JSON.parse(text);
-      }
-    } catch {}
 
     if (!response.ok) {
 
       throw new Error(
-        "채팅 구독 실패: " +
-        (
-          data.message ||
-          data.error ||
-          text ||
-          response.status
-        )
+        `채팅 구독 실패: HTTP ${response.status} ${text}`
       );
 
     }
 
-    this.status(
-      "채팅 이벤트 구독 요청 완료"
-    );
-  }
 
-  scheduleReconnect() {
-
-    if (this.stopped) {
-      return;
-    }
-
-    if (this.reconnecting) {
-      return;
-    }
-
-    this.reconnecting = true;
-
-    this.clearRetryTimer();
-
-    const delay =
-      Math.min(
-        5000 * Math.max(1, this.retryCount + 1),
-        30000
-      );
-
-    this.retryCount++;
-
-    this.status(
-      `${Math.round(delay / 1000)}초 후 채팅 자동 재연결`
+    console.log(
+      "✅ CHAT 이벤트 구독 요청 성공"
     );
 
-    this.retryTimer =
-      setTimeout(
-        async () => {
-
-          this.retryTimer = null;
-          this.reconnecting = false;
-
-          if (this.stopped) {
-            return;
-          }
-
-          await this.connectNewSession();
-
-        },
-        delay
-      );
   }
 
-  clearRetryTimer() {
 
-    if (this.retryTimer) {
+  normalizeData(
+    raw
+  ) {
 
-      clearTimeout(
-        this.retryTimer
-      );
+    if (
+      Array.isArray(raw)
+    ) {
 
-      this.retryTimer = null;
+      return raw[0] ||
+        null;
+
     }
+
+
+    return raw ||
+      null;
+
   }
+
 
   disconnect() {
 
-    this.stopped = true;
+    this.closed =
+      true;
 
-    this.clearRetryTimer();
+
+    this.connected =
+      false;
+
+    this.subscribed =
+      false;
+
 
     if (this.socket) {
 
       try {
-        this.socket.removeAllListeners();
+
         this.socket.disconnect();
+
       } catch {}
 
-      this.socket = null;
+      this.socket =
+        null;
+
     }
 
-    this.connected = false;
-    this.subscribed = false;
-    this.sessionKey = null;
-    this.reconnecting = false;
 
-    this.status(
-      "치지직 채팅 연결을 종료했습니다."
-    );
+    this.sessionKey =
+      null;
+
   }
+
 }
