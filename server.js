@@ -295,17 +295,43 @@ async function startLiveWatcher(req) {
    * 세션 정보만 최신화
    */
 
-  if (liveWatchers.has(channelId)) {
+ if (liveWatchers.has(channelId)) {
 
-    const watcher =
-      liveWatchers.get(channelId);
+  const watcher =
+    liveWatchers.get(channelId);
 
-    watcher.req = req;
-    watcher.accessToken = accessToken;
-    watcher.stopped = false;
+  watcher.req =
+    req;
 
-    return;
+  watcher.accessToken =
+    accessToken;
+
+  watcher.stopped =
+    false;
+
+  /*
+   * 기존 감시 타이머가 없고
+   * 현재 확인 중도 아니면
+   * 감시를 다시 시작
+   */
+
+  if (
+    !watcher.timer &&
+    !watcher.checking
+  ) {
+
+    console.log(
+      "⚠️ 방송 감시 타이머 없음 → 감시 재시작"
+    );
+
+    checkLiveWatcher(
+      channelId
+    );
+
   }
+
+  return;
+}
 
   const watcher = {
 
