@@ -1284,68 +1284,6 @@ function stopLiveWatcher(channelId) {
 
 }
 
-/* =========================================
-   CHZZK 방송 상태 확인
-========================================= */
-
-  const response =
-    await fetch(
-      "https://openapi.chzzk.naver.com/open/v1/lives?size=20",
-      {
-        method: "GET",
-
-        headers: {
-          "Client-Id": clientId,
-          "Client-Secret": clientSecret
-        }
-      }
-    );
-
-  const text =
-    await response.text();
-
-  let data;
-
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(
-      "CHZZK 라이브 API 응답이 JSON이 아닙니다."
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      "CHZZK 라이브 상태 조회 실패: " +
-      (
-        data.message ||
-        data.error ||
-        JSON.stringify(data)
-      )
-    );
-  }
-
-  const content =
-    data.content || data;
-
-  const lives =
-    content.data ||
-    content.lives ||
-    [];
-
-  if (!Array.isArray(lives)) {
-    return null;
-  }
-
-  return (
-    lives.find(
-      live =>
-        String(live.channelId) ===
-        String(channelId)
-    ) || null
-  );
-
-}
 
 /* =========================================
    방송 상태 자동 감시
