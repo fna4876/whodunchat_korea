@@ -1345,17 +1345,13 @@ function stopLiveWatcher(channelId) {
      *
      * 아래 방식으로는 로그인 세션을 직접 순회할 수 없기 때문에
      * 실제 자동 시작은 로그인 직후 해당 세션에서 감시를 시작해야 함.
-     */
+    
 
-    if (!targetChannelId) {
-      return;
-    }
+/* =========================================
+   방송 세션
+========================================= */
 
-    const live =
-      await getCurrentLive(
-        targetChannelId
-      );
-
+function createBroadcastSession(req, liveInfo = null) {
     const isLive =
       !!live;
 
