@@ -1245,36 +1245,30 @@ async function checkLogin(){
     );
 
 
-    if(
-      data.ok &&
-      data.loggedIn
-    ){
+    if(data.loggedIn){
 
-      const user =
-        data.user || {};
+  document.getElementById("login").textContent =
+    "치지직 연결됨";
 
-      const channelName =
-        user.channelName ||
-        user.nickname ||
-        user.channel?.channelName ||
-        "치지직 채널";
+  document.getElementById("login").disabled = true;
 
+  document.getElementById("loginTop").textContent =
+    "연결됨";
 
-      /* ===============================
-         채널 카드
-      =============================== */
+  document.getElementById("loginTop").disabled = true;
 
-      document
-        .getElementById("channelName")
-        .textContent =
-          channelName;
+  document.getElementById("headerStatus").textContent =
+    "채널 연결됨";
 
+  document.getElementById("channelName").textContent =
+    data.user?.channelName ||
+    data.user?.nickname ||
+    "치지직 채널 연결됨";
 
-      document
-        .getElementById("channelInfo")
-        .textContent =
-          "치지직 로그인 완료 · 실시간 방송 채팅을 수집할 수 있습니다.";
+  document.getElementById("channelInfo").textContent =
+    "실시간 방송 채팅을 수집할 준비가 되었습니다.";
 
+}
 
       /* ===============================
          로그인 버튼

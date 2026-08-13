@@ -433,55 +433,46 @@ async function resolveChannelId(
    현재 방송 조회
 ========================================================= */
 
-async function getCurrentLive(
-  channelId,
-  accessToken = null
-) {
+async function getCurrentLive(channelId) {
 
   if (!channelId) {
     return null;
   }
 
   const url =
-    `${CHZZK_API}/open/v1/lives?channelId=${encodeURIComponent(
-      channelId
-    )}`;
+    `${CHZZK_API}/open/v1/lives?size=20`;
 
   const data =
     await chzzkFetch(
       url,
-      accessToken
+      null,
+      {
+        headers: {
+          "Client-Id": CHZZK_CLIENT_ID,
+          "Client-Secret": CHZZK_CLIENT_SECRET
+        }
+      }
     );
 
   const content =
     data?.content;
 
-  if (Array.isArray(content)) {
-
-    if (content.length === 0) {
-      return null;
-    }
-
-    return normalizeLive(
-      content[0]
-    );
-
+  if (!Array.isArray(content)) {
+    return null;
   }
 
-  if (
-    content &&
-    typeof content === "object"
-  ) {
-
-    return normalizeLive(
-      content
+  const live =
+    content.find(
+      item =>
+        item.channelId === channelId
     );
 
+  if (!live) {
+    return null;
   }
 
-  return null;
+  return normalizeLive(live);
 }
-
 
 /* =========================================================
    방송 정보 정리
