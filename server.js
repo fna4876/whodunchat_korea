@@ -1437,6 +1437,11 @@ app.get(
         error_description
       } = req.query;
 
+      console.log("Client ID 존재:", !!CHZZK_CLIENT_ID);
+      console.log("Client Secret 존재:", !!CHZZK_CLIENT_SECRET);
+      console.log("Client Secret 길이:", CHZZK_CLIENT_SECRET.length);
+      console.log("Code 존재:", !!code);
+      console.log("State 존재:", !!state);
 
       /*
        * 치지직에서 인증 실패를 반환한 경우
@@ -1525,102 +1530,62 @@ app.get(
       /*
        * Access Token 요청
        */
-     const body =
-  new URLSearchParams({
+     const body = {
+  grantType: "authorization_code",
+  clientId: CHZZK_CLIENT_ID,
+  clientSecret: CHZZK_CLIENT_SECRET,
+  code: String(code),
+  state: String(state)
+};
 
-    grantType:
-      "authorization_code",
+const response = await fetch(
+  `${CHZZK_API}/auth/v1/token`,
+  {
+    method: "POST",
 
-    clientId:
-      CHZZK_CLIENT_ID,
+    headers: {
+      "Content-Type": "application/json"
+    },
 
-    clientSecret:
-      CHZZK_CLIENT_SECRET,
+    body: JSON.stringify(body)
+  }
+);
 
-    code:
-      String(code),
+const text = await response.text();
 
-    state:
-      String(state)
+let data = null;
 
-  });
+try {
+  data = text ? JSON.parse(text) : null;
+} catch {
+  data = null;
+}
 
-      const response =
-  await fetch(
-    `${CHZZK_API}/auth/v1/token`,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-
-      body
-    }
+if (!response.ok) {
+  console.error(
+    "❌ Token 요청 실패:",
+    response.status,
+    text
   );
 
+  throw new Error(
+    data?.message ||
+    text ||
+    `HTTP ${response.status}`
+  );
+}
 
-      const text =
-        await response.text();
+const content =
+  data?.content || data;
 
+const accessToken =
+  content?.accessToken;
 
-      let data = null;
-
-      try {
-
-        data =
-          text
-            ? JSON.parse(text)
-            : null;
-
-      } catch {
-
-        data = null;
-
-      }
-
-
-      if (!response.ok) {
-
-        console.error(
-          "❌ Token 요청 실패:",
-          response.status,
-          text
-        );
-
-        throw new Error(
-          data?.message ||
-          data?.error ||
-          text ||
-          `HTTP ${response.status}`
-        );
-
-      }
-
-
-      const content =
-        data?.content ||
-        data;
-
-
-      const accessToken =
-        content?.accessToken ||
-        content?.access_token;
-
-
-      if (!accessToken) {
-
-        console.error(
-          "❌ Access Token 없음:",
-          data
-        );
-
-        throw new Error(
-          "Access Token을 받지 못했습니다."
-        );
-
-      }
+if (!accessToken) {
+  throw new Error(
+    "Access Token을 받지 못했습니다."
+  );
+}
 
 
       /*
