@@ -14,10 +14,14 @@ import { ChzzkChat } from "./chzzk-chat.js";
    기본 설정
 ========================================= */
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename =
+  fileURLToPath(import.meta.url);
 
-const app = express();
+const __dirname =
+  path.dirname(__filename);
+
+const app =
+  express();
 
 const PORT =
   Number(process.env.PORT || 3000);
@@ -33,12 +37,6 @@ const CHZZK_API =
 const chatConnections =
   new Map();
 
-/*
- * 로그인해서 실제로 사용하는 채널만
- * 방송 감시자로 등록한다.
- *
- * channelId -> watcher
- */
 const liveWatchers =
   new Map();
 
@@ -60,14 +58,18 @@ app.use(
 );
 
 
-/*
- * Render에서는 메모리 세션을 사용한다.
- *
- * 서버가 재시작되면 로그인 세션은
- * 사라질 수 있다.
- */
+/* =========================================
+   세션
+========================================= */
+
+app.set(
+  "trust proxy",
+  1
+);
+
 app.use(
   session({
+
     secret:
       process.env.SESSION_SECRET ||
       "whodunchat-secret-change-this",
@@ -77,13 +79,23 @@ app.use(
     saveUninitialized: false,
 
     cookie: {
+
       httpOnly: true,
+
       secure:
         process.env.NODE_ENV === "production",
+
       sameSite: "lax",
+
       maxAge:
-        1000 * 60 * 60 * 24 * 30
+        1000 *
+        60 *
+        60 *
+        24 *
+        30
+
     }
+
   })
 );
 
@@ -93,12 +105,21 @@ app.use(
 ========================================= */
 
 const publicPath =
-  path.join(__dirname, "public");
+  path.join(
+    __dirname,
+    "public"
+  );
 
-if (fs.existsSync(publicPath)) {
+if (
+  fs.existsSync(
+    publicPath
+  )
+) {
 
   app.use(
-    express.static(publicPath)
+    express.static(
+      publicPath
+    )
   );
 
 }
@@ -149,13 +170,23 @@ function getAccessToken(req) {
 }
 
 
-function requireLogin(req, res, next) {
+function requireLogin(
+  req,
+  res,
+  next
+) {
 
-  if (!req.session?.accessToken) {
+  if (
+    !req.session?.accessToken
+  ) {
 
     return res.status(401).json({
+
       ok: false,
-      message: "로그인이 필요합니다."
+
+      message:
+        "로그인이 필요합니다."
+
     });
 
   }
@@ -176,8 +207,11 @@ async function chzzkFetch(
 ) {
 
   const headers = {
+
     ...(options.headers || {})
+
   };
+
 
   if (accessToken) {
 
@@ -185,6 +219,7 @@ async function chzzkFetch(
       `Bearer ${accessToken}`;
 
   }
+
 
   const response =
     await fetch(
@@ -195,10 +230,13 @@ async function chzzkFetch(
       }
     );
 
+
   const text =
     await response.text();
 
+
   let data = null;
+
 
   try {
 
@@ -213,6 +251,7 @@ async function chzzkFetch(
 
   }
 
+
   if (!response.ok) {
 
     const message =
@@ -221,11 +260,13 @@ async function chzzkFetch(
       text ||
       `HTTP ${response.status}`;
 
+
     throw new Error(
       `치지직 API 오류: ${message}`
     );
 
   }
+
 
   return data;
 
@@ -240,12 +281,6 @@ async function getCurrentUser(
   accessToken
 ) {
 
-  /*
-   * 치지직 Open API의 사용자 정보가
-   * 환경/권한에 따라 달라질 수 있으므로
-   * 먼저 대표 endpoint를 사용한다.
-   */
-
   const urls = [
 
     `${CHZZK_API}/open/v1/users/me`,
@@ -254,9 +289,13 @@ async function getCurrentUser(
 
   ];
 
+
   let lastError = null;
 
-  for (const url of urls) {
+
+  for (
+    const url of urls
+  ) {
 
     try {
 
@@ -266,6 +305,7 @@ async function getCurrentUser(
           accessToken
         );
 
+
       return (
         data?.content ||
         data
@@ -273,16 +313,20 @@ async function getCurrentUser(
 
     } catch (error) {
 
-      lastError = error;
+      lastError =
+        error;
 
     }
 
   }
 
-  throw lastError ||
+
+  throw (
+    lastError ||
     new Error(
       "사용자 정보를 가져오지 못했습니다."
-    );
+    )
+  );
 
 }
 
@@ -296,47 +340,61 @@ async function getCurrentLive(
 ) {
 
   if (!channelId) {
+
     return null;
+
   }
 
+
   const url =
-    `${CHZZK_API}/open/v1/lives?channelId=${encodeURIComponent(channelId)}`;
+    `${CHZZK_API}/open/v1/lives?channelId=${encodeURIComponent(
+      channelId
+    )}`;
+
 
   try {
 
     const data =
-      await chzzkFetch(url);
+      await chzzkFetch(
+        url
+      );
+
 
     const content =
       data?.content;
 
-    /*
-     * API가 배열을 반환하는 경우
-     */
-    if (Array.isArray(content)) {
 
-      if (content.length === 0) {
+    if (
+      Array.isArray(content)
+    ) {
+
+      if (
+        content.length === 0
+      ) {
+
         return null;
+
       }
 
-      const live =
-        content[0];
 
-      return normalizeLive(live);
+      return normalizeLive(
+        content[0]
+      );
 
     }
 
-    /*
-     * content가 객체인 경우
-     */
+
     if (
       content &&
       typeof content === "object"
     ) {
 
-      return normalizeLive(content);
+      return normalizeLive(
+        content
+      );
 
     }
+
 
     return null;
 
@@ -358,11 +416,16 @@ async function getCurrentLive(
    방송 정보 정리
 ========================================= */
 
-function normalizeLive(live) {
+function normalizeLive(
+  live
+) {
 
   if (!live) {
+
     return null;
+
   }
+
 
   return {
 
@@ -422,19 +485,32 @@ async function resolveChannelId(
       accessToken
     );
 
+
   const channelId =
     user?.channelId ||
     user?.channel?.channelId ||
     user?.channel?.id ||
     null;
 
+
   if (!channelId) {
+
+    console.log(
+      "치지직 사용자 정보:",
+      JSON.stringify(
+        user,
+        null,
+        2
+      )
+    );
+
 
     throw new Error(
       "로그인한 계정의 채널 ID를 확인하지 못했습니다."
     );
 
   }
+
 
   return {
 
@@ -451,13 +527,16 @@ async function resolveChannelId(
    채팅 수집 시작
 ========================================= */
 
-async function startChatCollection(req) {
+async function startChatCollection(
+  req
+) {
 
   const channelId =
     getChannelId(req);
 
   const accessToken =
     getAccessToken(req);
+
 
   if (!channelId) {
 
@@ -466,6 +545,7 @@ async function startChatCollection(req) {
     );
 
   }
+
 
   if (!accessToken) {
 
@@ -478,12 +558,14 @@ async function startChatCollection(req) {
 
   /*
    * 기존 연결이 살아 있으면
-   * 중복 연결하지 않는다.
+   * 중복 연결하지 않음
    */
+
   const existing =
     chatConnections.get(
       channelId
     );
+
 
   if (
     existing &&
@@ -498,6 +580,7 @@ async function startChatCollection(req) {
   /*
    * 기존 연결 정리
    */
+
   if (existing) {
 
     try {
@@ -526,25 +609,33 @@ async function startChatCollection(req) {
 
       channelId,
 
-      onChat: (message) => {
+
+      onChat: (
+        message
+      ) => {
 
         const connection =
           chatConnections.get(
             channelId
           );
 
+
         if (!connection) {
+
           return;
+
         }
+
 
         connection.messages.push(
           message
         );
 
+
         /*
-         * 너무 커지지 않도록
          * 최근 1000개만 보관
          */
+
         if (
           connection.messages.length >
           1000
@@ -559,7 +650,10 @@ async function startChatCollection(req) {
 
       },
 
-      onStatus: (message) => {
+
+      onStatus: (
+        message
+      ) => {
 
         console.log(
           `[채팅 상태 ${channelId}]`,
@@ -597,10 +691,12 @@ async function startChatCollection(req) {
 
     await chat.connect();
 
+
     console.log(
       "✅ 채팅 연결 완료:",
       channelId
     );
+
 
     return connection;
 
@@ -609,15 +705,18 @@ async function startChatCollection(req) {
     connection.collecting =
       false;
 
+
     chatConnections.delete(
       channelId
     );
+
 
     try {
 
       chat.disconnect();
 
     } catch {}
+
 
     throw error;
 
@@ -630,26 +729,37 @@ async function startChatCollection(req) {
    채팅 수집 중지
 ========================================= */
 
-function stopChatCollection(req) {
+function stopChatCollection(
+  req
+) {
 
   const channelId =
     getChannelId(req);
 
+
   if (!channelId) {
+
     return;
+
   }
+
 
   const connection =
     chatConnections.get(
       channelId
     );
 
+
   if (!connection) {
+
     return;
+
   }
+
 
   connection.collecting =
     false;
+
 
   try {
 
@@ -657,9 +767,11 @@ function stopChatCollection(req) {
 
   } catch {}
 
+
   chatConnections.delete(
     channelId
   );
+
 
   console.log(
     "💬 채팅 수집 종료:",
@@ -682,31 +794,46 @@ async function checkLiveWatcher(
       channelId
     );
 
+
   if (!watcher) {
+
     return;
+
   }
+
 
   /*
    * 이미 확인 중이면
    * 중복 실행 방지
    */
-  if (watcher.checking) {
+
+  if (
+    watcher.checking
+  ) {
+
     return;
+
   }
+
 
   watcher.checking =
     true;
 
+
   try {
 
     console.log(
-      `[방송 감시] ${new Date().toLocaleTimeString("ko-KR")} 방송 상태 확인`
+      `[방송 감시] ${new Date().toLocaleTimeString(
+        "ko-KR"
+      )} 방송 상태 확인`
     );
+
 
     const live =
       await getCurrentLive(
         channelId
       );
+
 
     const isLive =
       !!live;
@@ -725,8 +852,11 @@ async function checkLiveWatcher(
       watcher.isLive =
         true;
 
+
       watcher.liveId =
-        live.liveId || null;
+        live.liveId ||
+        null;
+
 
       watcher.liveInfo =
         live;
@@ -738,6 +868,7 @@ async function checkLiveWatcher(
         "(제목 없음)"
       );
 
+
       console.log(
         "방송 ID:",
         live.liveId
@@ -747,6 +878,7 @@ async function checkLiveWatcher(
       /*
        * 새로운 방송 시작
        */
+
       if (
         !previousLiveId ||
         previousLiveId !==
@@ -757,11 +889,13 @@ async function checkLiveWatcher(
           "🆕 새로운 방송 감지"
         );
 
+
         try {
 
           await startChatCollection(
             watcher.req
           );
+
 
           console.log(
             "✅ 새로운 방송 → 채팅 수집 시작"
@@ -783,6 +917,7 @@ async function checkLiveWatcher(
        * 방송 중인데
        * 채팅 연결이 없는 경우
        */
+
       const connection =
         chatConnections.get(
           channelId
@@ -798,15 +933,18 @@ async function checkLiveWatcher(
           "⚠️ 방송 중인데 채팅 연결 없음"
         );
 
+
         console.log(
           "🔄 채팅 연결 재시도"
         );
+
 
         try {
 
           await startChatCollection(
             watcher.req
           );
+
 
           console.log(
             "✅ 채팅 자동 재연결 성공"
@@ -833,10 +971,13 @@ async function checkLiveWatcher(
     else {
 
       /*
-       * 실제로 방송 중이었다가
+       * 실제 방송 중이었다가
        * 종료된 경우에만 처리
        */
-      if (watcher.isLive) {
+
+      if (
+        watcher.isLive
+      ) {
 
         console.log("");
 
@@ -879,8 +1020,10 @@ async function checkLiveWatcher(
       watcher.isLive =
         false;
 
+
       watcher.liveId =
         null;
+
 
       watcher.liveInfo =
         null;
@@ -890,16 +1033,15 @@ async function checkLiveWatcher(
   } catch (error) {
 
     /*
-     * 중요:
-     *
      * API 오류가 발생했다고
-     * 방송 종료로 판단하지 않는다.
+     * 방송 종료로 판단하지 않음
      */
 
     console.error(
       `[방송 감시 API 오류] ${channelId}:`,
       error.message
     );
+
 
     console.log(
       "⚠️ 이번 확인은 실패했지만 감시는 계속합니다."
@@ -914,12 +1056,17 @@ async function checkLiveWatcher(
     /*
      * 10초 후 다시 확인
      */
+
     if (
-      liveWatchers.has(channelId) &&
+      liveWatchers.has(
+        channelId
+      ) &&
       !watcher.stopped
     ) {
 
-      if (watcher.timer) {
+      if (
+        watcher.timer
+      ) {
 
         clearTimeout(
           watcher.timer
@@ -956,10 +1103,13 @@ async function checkLiveWatcher(
    방송 감시 시작
 ========================================= */
 
-async function startLiveWatcher(req) {
+async function startLiveWatcher(
+  req
+) {
 
   const channelId =
     getChannelId(req);
+
 
   const accessToken =
     req.session?.accessToken;
@@ -987,6 +1137,7 @@ async function startLiveWatcher(req) {
    * 이미 이 채널을 감시 중이면
    * 로그인 정보만 최신화
    */
+
   if (
     liveWatchers.has(
       channelId
@@ -1002,8 +1153,10 @@ async function startLiveWatcher(req) {
     watcher.req =
       req;
 
+
     watcher.accessToken =
       accessToken;
+
 
     watcher.stopped =
       false;
@@ -1013,6 +1166,7 @@ async function startLiveWatcher(req) {
      * 타이머가 사라졌으면
      * 감시 다시 시작
      */
+
     if (
       !watcher.timer &&
       !watcher.checking
@@ -1022,11 +1176,13 @@ async function startLiveWatcher(req) {
         "⚠️ 방송 감시 타이머 없음 → 감시 재시작"
       );
 
+
       checkLiveWatcher(
         channelId
       );
 
     }
+
 
     return;
 
@@ -1037,6 +1193,7 @@ async function startLiveWatcher(req) {
    * 새로운 로그인 사용자의
    * 채널만 감시자로 등록
    */
+
   const watcher = {
 
     channelId,
@@ -1093,6 +1250,7 @@ async function startLiveWatcher(req) {
   /*
    * 로그인 직후 즉시 확인
    */
+
   await checkLiveWatcher(
     channelId
   );
@@ -1113,8 +1271,11 @@ function stopLiveWatcher(
       channelId
     );
 
+
   if (!watcher) {
+
     return;
+
   }
 
 
@@ -1122,11 +1283,14 @@ function stopLiveWatcher(
     true;
 
 
-  if (watcher.timer) {
+  if (
+    watcher.timer
+  ) {
 
     clearTimeout(
       watcher.timer
     );
+
 
     watcher.timer =
       null;
@@ -1148,65 +1312,115 @@ function stopLiveWatcher(
 
 
 /* =========================================
-   로그인
+   치지직 로그인
 ========================================= */
 
 app.get(
   "/auth/login",
   (req, res) => {
 
-    if (
-      !CHZZK_CLIENT_ID ||
-      !CHZZK_REDIRECT_URI
-    ) {
+    try {
 
-      return res.status(500).send(
-        "CHZZK_CLIENT_ID 또는 CHZZK_REDIRECT_URI 환경변수가 없습니다."
+      if (
+        !CHZZK_CLIENT_ID
+      ) {
+
+        return res.status(500).send(
+          "CHZZK_CLIENT_ID 환경변수가 없습니다."
+        );
+
+      }
+
+
+      if (
+        !CHZZK_REDIRECT_URI
+      ) {
+
+        return res.status(500).send(
+          "CHZZK_REDIRECT_URI 환경변수가 없습니다."
+        );
+
+      }
+
+
+      /*
+       * CSRF 방지용 state
+       */
+
+      const state =
+        crypto
+          .randomBytes(24)
+          .toString("hex");
+
+
+      req.session.oauthState =
+        state;
+
+
+      /*
+       * 치지직 OAuth 인증 주소
+       *
+       * 중요:
+       * account/login이 아니라
+       * account-interlock 사용
+       */
+
+      const params =
+        new URLSearchParams({
+
+          clientId:
+            CHZZK_CLIENT_ID,
+
+          redirectUri:
+            CHZZK_REDIRECT_URI,
+
+          state
+
+        });
+
+
+      const authorizeUrl =
+        `https://chzzk.naver.com/account-interlock?${params.toString()}`;
+
+
+      console.log("");
+
+      console.log(
+        "===== 치지직 로그인 ====="
+      );
+
+      console.log(
+        "Client ID:",
+        CHZZK_CLIENT_ID
+      );
+
+      console.log(
+        "Redirect URI:",
+        CHZZK_REDIRECT_URI
+      );
+
+      console.log(
+        "========================"
+      );
+
+
+      res.redirect(
+        authorizeUrl
+      );
+
+    } catch (error) {
+
+      console.error(
+        "로그인 주소 생성 오류:",
+        error
+      );
+
+
+      res.status(500).send(
+        `로그인 주소 생성 실패: ${error.message}`
       );
 
     }
-
-
-    const state =
-      crypto.randomBytes(
-        24
-      ).toString(
-        "hex"
-      );
-
-
-    req.session.oauthState =
-      state;
-
-
-    const params =
-      new URLSearchParams({
-
-        clientId:
-          CHZZK_CLIENT_ID,
-
-        redirectUri:
-          CHZZK_REDIRECT_URI,
-
-        state
-
-      });
-
-
-    const url =
-      `https://chzzk.naver.com/account/login?redirect=${encodeURIComponent(
-        `/oauth2/authorize?${params.toString()}`
-      )}`;
-
-
-    /*
-     * 환경에 따라 직접 authorize URL을
-     * 사용하는 경우가 있으므로
-     * CHZZK 공식 개발자센터 설정을
-     * 확인해야 한다.
-     */
-
-    res.redirect(url);
 
   }
 );
@@ -1222,25 +1436,37 @@ app.get(
 
     try {
 
-      const {
-        code,
-        state
-      } = req.query;
+      const code =
+        req.query?.code;
 
+      const state =
+        req.query?.state;
+
+
+      /*
+       * 인증 코드 확인
+       */
 
       if (!code) {
 
         return res.status(400).send(
-          "인증 코드가 없습니다."
+          "치지직 인증 코드가 없습니다."
         );
 
       }
 
 
+      /*
+       * state 확인
+       */
+
+      const savedState =
+        req.session?.oauthState;
+
+
       if (
-        req.session.oauthState &&
-        state &&
-        req.session.oauthState !== state
+        savedState &&
+        state !== savedState
       ) {
 
         return res.status(400).send(
@@ -1249,6 +1475,10 @@ app.get(
 
       }
 
+
+      /*
+       * 환경변수 확인
+       */
 
       if (
         !CHZZK_CLIENT_ID ||
@@ -1263,25 +1493,35 @@ app.get(
       }
 
 
-      const body =
-        new URLSearchParams({
+      /*
+       * Access Token 발급
+       *
+       * 치지직은 JSON body 사용
+       */
 
-          grant_type:
-            "authorization_code",
+      const tokenBody = {
 
-          client_id:
-            CHZZK_CLIENT_ID,
+        grantType:
+          "authorization_code",
 
-          client_secret:
-            CHZZK_CLIENT_SECRET,
+        clientId:
+          CHZZK_CLIENT_ID,
 
-          redirect_uri:
-            CHZZK_REDIRECT_URI,
+        clientSecret:
+          CHZZK_CLIENT_SECRET,
 
-          code:
-            String(code)
+        code:
+          String(code),
 
-        });
+        state:
+          String(state)
+
+      };
+
+
+      console.log(
+        "🔑 Access Token 요청"
+      );
 
 
       const response =
@@ -1295,11 +1535,17 @@ app.get(
             headers: {
 
               "Content-Type":
-                "application/x-www-form-urlencoded"
+                "application/json",
+
+              Accept:
+                "application/json"
 
             },
 
-            body
+            body:
+              JSON.stringify(
+                tokenBody
+              )
 
           }
         );
@@ -1309,12 +1555,15 @@ app.get(
         await response.text();
 
 
-      let data;
+      let data = null;
+
 
       try {
 
         data =
-          JSON.parse(text);
+          text
+            ? JSON.parse(text)
+            : null;
 
       } catch {
 
@@ -1324,6 +1573,13 @@ app.get(
 
 
       if (!response.ok) {
+
+        console.error(
+          "토큰 발급 실패:",
+          response.status,
+          data || text
+        );
+
 
         throw new Error(
           data?.message ||
@@ -1345,7 +1601,23 @@ app.get(
         content?.access_token;
 
 
+      const refreshToken =
+        content?.refreshToken ||
+        content?.refresh_token ||
+        null;
+
+
       if (!accessToken) {
+
+        console.error(
+          "토큰 응답:",
+          JSON.stringify(
+            data,
+            null,
+            2
+          )
+        );
+
 
         throw new Error(
           "Access Token을 받지 못했습니다."
@@ -1354,14 +1626,26 @@ app.get(
       }
 
 
+      /*
+       * 세션에 저장
+       */
+
       req.session.accessToken =
         accessToken;
 
 
+      if (refreshToken) {
+
+        req.session.refreshToken =
+          refreshToken;
+
+      }
+
+
       /*
-       * 로그인한 사람의 채널만
-       * 가져온다.
+       * 로그인한 사용자 정보 확인
        */
+
       const {
         channelId,
         user
@@ -1374,14 +1658,78 @@ app.get(
       req.session.channelId =
         channelId;
 
+
       req.session.user =
         user;
 
 
       /*
-       * 로그인한 사람의 채널만
+       * OAuth state 삭제
+       */
+
+      delete req.session.oauthState;
+
+
+      /*
+       * 세션 저장 완료 후
        * 방송 감시 시작
        */
+
+      await new Promise(
+        (
+          resolve,
+          reject
+        ) => {
+
+          req.session.save(
+            (
+              error
+            ) => {
+
+              if (error) {
+
+                reject(
+                  error
+                );
+
+              } else {
+
+                resolve();
+
+              }
+
+            }
+          );
+
+        }
+      );
+
+
+      console.log("");
+
+      console.log(
+        "================================="
+      );
+
+      console.log(
+        "✅ 치지직 로그인 성공"
+      );
+
+      console.log(
+        "채널 ID:",
+        channelId
+      );
+
+      console.log(
+        "================================="
+      );
+
+
+      /*
+       * 로그인한 채널만
+       * 방송 감시 시작
+       */
+
       await startLiveWatcher(
         req
       );
@@ -1390,6 +1738,7 @@ app.get(
       /*
        * 메인 페이지로 이동
        */
+
       return res.redirect(
         "/"
       );
@@ -1397,9 +1746,17 @@ app.get(
     } catch (error) {
 
       console.error(
-        "OAuth 로그인 오류:",
+        "",
+      );
+
+      console.error(
+        "❌ OAuth 로그인 오류:"
+      );
+
+      console.error(
         error
       );
+
 
       return res.status(500).send(
         `로그인 실패: ${error.message}`
@@ -1450,7 +1807,10 @@ app.get(
 app.get(
   "/api/live/status",
   requireLogin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
 
     try {
 
@@ -1470,7 +1830,9 @@ app.get(
 
         channelId,
 
-        live: live || null,
+        live:
+          live ||
+          null,
 
         watching:
           liveWatchers.has(
@@ -1485,6 +1847,7 @@ app.get(
         "/api/live/status:",
         error
       );
+
 
       res.status(500).json({
 
@@ -1508,7 +1871,10 @@ app.get(
 app.post(
   "/api/live/start",
   requireLogin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
 
     try {
 
@@ -1558,7 +1924,10 @@ app.post(
 app.post(
   "/api/live/stop",
   requireLogin,
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
 
     const channelId =
       getChannelId(req);
@@ -1593,7 +1962,10 @@ app.post(
 app.post(
   "/api/chat/start",
   requireLogin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
 
     try {
 
@@ -1645,7 +2017,10 @@ app.post(
 app.post(
   "/api/chat/stop",
   requireLogin,
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
 
     stopChatCollection(
       req
@@ -1671,7 +2046,10 @@ app.post(
 app.get(
   "/api/chat/messages",
   requireLogin,
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
 
     const channelId =
       getChannelId(req);
@@ -1708,7 +2086,10 @@ app.get(
 
 app.get(
   "/auth/logout",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
 
     const channelId =
       getChannelId(req);
@@ -1719,6 +2100,7 @@ app.get(
       stopLiveWatcher(
         channelId
       );
+
 
       stopChatCollection(
         req
@@ -1742,12 +2124,15 @@ app.get(
 
 
 /* =========================================
-   기본 상태
+   서버 상태
 ========================================= */
 
 app.get(
   "/api/health",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
 
     res.json({
 
@@ -1777,7 +2162,10 @@ app.get(
 
 app.use(
   "/api",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
 
     res.status(404).json({
 
@@ -1810,9 +2198,13 @@ app.use(
     );
 
 
-    if (res.headersSent) {
+    if (
+      res.headersSent
+    ) {
 
-      return next(error);
+      return next(
+        error
+      );
 
     }
 
@@ -1864,7 +2256,7 @@ app.listen(
     );
 
     console.log(
-      "=================================" 
+      "================================="
     );
 
   }
@@ -1877,7 +2269,9 @@ app.listen(
 
 process.on(
   "uncaughtException",
-  (error) => {
+  (
+    error
+  ) => {
 
     console.error(
       "❌ uncaughtException:",
@@ -1890,7 +2284,9 @@ process.on(
 
 process.on(
   "unhandledRejection",
-  (error) => {
+  (
+    error
+  ) => {
 
     console.error(
       "❌ unhandledRejection:",
