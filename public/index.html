@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta name="google-site-verification" content="7_mF9VZIoupEhA6QoQh9TB0AJQ28JcoTTtJZkw8LeuA" />
+<meta
+  name="google-site-verification"
+  content="7_mF9VZIoupEhA6QoQh9TB0AJQ28JcoTTtJZkw8LeuA"
+/>
 
 <title>후던챗 | 치지직 채팅 추리</title>
 
 <style>
+
 *{
   box-sizing:border-box;
 }
@@ -17,7 +22,11 @@ body{
   margin:0;
   background:#080808;
   color:#f5f5f5;
-  font-family:"Malgun Gothic","Noto Sans KR",Arial,sans-serif;
+  font-family:
+    "Malgun Gothic",
+    "Noto Sans KR",
+    Arial,
+    sans-serif;
 }
 
 button{
@@ -25,32 +34,54 @@ button{
   cursor:pointer;
 }
 
+button:disabled{
+  cursor:default;
+}
+
 .hidden{
   display:none!important;
 }
 
-/* 전체 */
+
+/* =========================================
+   전체
+========================================= */
 
 .page{
   width:100%;
   min-height:100vh;
+
   background:
-    radial-gradient(circle at 50% -20%,#252525 0,#080808 45%);
+    radial-gradient(
+      circle at 50% -20%,
+      #252525 0,
+      #080808 45%
+    );
 }
 
-/* 상단 */
+
+/* =========================================
+   상단
+========================================= */
 
 .header{
   height:70px;
+
   border-bottom:1px solid #292929;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
+
   padding:0 28px;
+
   position:sticky;
   top:0;
+
   background:rgba(8,8,8,.92);
+
   backdrop-filter:blur(10px);
+
   z-index:10;
 }
 
@@ -79,38 +110,64 @@ button{
   border:1px solid #444;
   background:#111;
   color:#fff;
+
   padding:9px 14px;
+
   border-radius:5px;
 }
 
-/* 메인 */
+
+/* =========================================
+   메인
+========================================= */
 
 .container{
-  width:min(1100px,calc(100% - 32px));
+  width:min(
+    1100px,
+    calc(100% - 32px)
+  );
+
   margin:auto;
+
   padding:70px 0;
 }
 
-/* 히어로 */
+
+/* =========================================
+   히어로
+========================================= */
 
 .hero{
   text-align:center;
+
   padding:50px 0 70px;
 }
 
 .hero-small{
   color:#00d564;
+
   font-size:12px;
   font-weight:800;
+
   letter-spacing:3px;
+
   margin-bottom:18px;
 }
 
 .hero h1{
   margin:0;
-  font-size:clamp(48px,9vw,92px);
+
+  font-size:
+    clamp(
+      48px,
+      9vw,
+      92px
+    );
+
   line-height:.95;
+
   letter-spacing:-6px;
+
   font-weight:950;
 }
 
@@ -120,22 +177,36 @@ button{
 
 .hero p{
   margin:25px auto 0;
+
   color:#999;
+
   max-width:570px;
+
   line-height:1.8;
+
   font-size:14px;
 }
 
-/* 사건 시작 버튼 */
+
+/* =========================================
+   메인 버튼
+========================================= */
 
 .main-button{
   margin-top:30px;
+
   border:0;
+
   background:#00d564;
+
   color:#06100a;
+
   font-size:16px;
+
   font-weight:900;
+
   padding:17px 38px;
+
   border-radius:5px;
 }
 
@@ -147,20 +218,30 @@ button{
   opacity:.5;
 }
 
-/* 카드 */
+
+/* =========================================
+   카드
+========================================= */
 
 .card{
   border:1px solid #292929;
+
   background:#0e0e0e;
+
   border-radius:8px;
+
   overflow:hidden;
 }
 
 .card-head{
   border-bottom:1px solid #292929;
+
   padding:17px 20px;
+
   display:flex;
+
   align-items:center;
+
   justify-content:space-between;
 }
 
@@ -178,12 +259,19 @@ button{
   padding:20px;
 }
 
-/* 채널 */
+
+/* =========================================
+   채널
+========================================= */
 
 .channel{
   display:grid;
-  grid-template-columns:1fr auto;
+
+  grid-template-columns:
+    1fr auto;
+
   gap:20px;
+
   align-items:center;
 }
 
@@ -194,20 +282,40 @@ button{
 
 .channel-info{
   color:#777;
+
   font-size:12px;
+
   margin-top:6px;
 }
 
 .login-button{
   border:1px solid #00d564;
+
   background:#00d564;
+
   color:#071009;
+
   padding:13px 20px;
+
   border-radius:5px;
+
   font-weight:900;
 }
 
-/* 사건 카드 */
+.login-button.connected{
+  background:#10351f;
+
+  color:#70ffad;
+
+  border-color:#00d564;
+
+  cursor:default;
+}
+
+
+/* =========================================
+   사건 카드
+========================================= */
 
 .section{
   margin-top:25px;
@@ -215,70 +323,104 @@ button{
 
 .section-title{
   margin:0 0 12px;
+
   font-size:12px;
+
   color:#777;
+
   font-weight:900;
+
   letter-spacing:2px;
 }
 
 .modes{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+
+  grid-template-columns:
+    repeat(4,1fr);
+
   gap:10px;
 }
 
 .mode{
   min-height:130px;
+
   padding:18px;
+
   border:1px solid #292929;
+
   background:#0d0d0d;
+
   border-radius:7px;
+
   transition:.15s;
 }
 
 .mode:hover{
   border-color:#555;
+
   transform:translateY(-2px);
 }
 
 .mode.active{
   border-color:#00d564;
-  box-shadow:0 0 0 1px #00d564 inset;
+
+  box-shadow:
+    0 0 0 1px
+    #00d564
+    inset;
 }
 
 .mode-number{
   color:#00d564;
+
   font-size:11px;
+
   font-weight:900;
 }
 
 .mode h3{
   margin:22px 0 7px;
+
   font-size:17px;
 }
 
 .mode p{
   margin:0;
+
   color:#777;
+
   font-size:11px;
+
   line-height:1.6;
 }
 
-/* 채팅 */
+
+/* =========================================
+   채팅
+========================================= */
 
 .live-control{
   display:flex;
+
   gap:8px;
+
   margin-bottom:12px;
 }
 
 .live-button{
   flex:1;
+
   border:1px solid #333;
+
   background:#151515;
+
   color:#eee;
+
   padding:13px;
+
   border-radius:5px;
+
   font-weight:800;
 }
 
@@ -292,28 +434,39 @@ button{
 
 .chat-status{
   color:#777;
+
   font-size:11px;
+
   margin-bottom:10px;
 }
 
 .chatlog{
   height:240px;
+
   overflow-y:auto;
+
   background:#080808;
+
   border:1px solid #222;
+
   border-radius:5px;
+
   padding:12px;
 }
 
 .chat-row{
   font-size:12px;
+
   line-height:1.8;
+
   border-bottom:1px solid #151515;
 }
 
 .chat-name{
   color:#00d564;
+
   font-weight:900;
+
   margin-right:7px;
 }
 
@@ -321,7 +474,10 @@ button{
   color:#ccc;
 }
 
-/* 게임 */
+
+/* =========================================
+   게임
+========================================= */
 
 .game{
   padding-top:35px;
@@ -329,87 +485,133 @@ button{
 
 .game-top{
   display:flex;
+
   justify-content:space-between;
+
   align-items:center;
+
   margin-bottom:20px;
 }
 
 .tag{
   display:inline-block;
+
   border:1px solid #444;
+
   padding:7px 10px;
+
   border-radius:4px;
+
   color:#aaa;
+
   font-size:10px;
+
   font-weight:900;
 }
 
 .game-title{
   font-size:42px;
+
   margin:0;
+
   letter-spacing:-2px;
 }
 
 .brief{
   color:#888;
+
   font-size:13px;
+
   line-height:1.8;
+
   margin:12px 0 25px;
 }
 
-/* 증거 */
+
+/* =========================================
+   증거
+========================================= */
 
 .evidence-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
+
+  grid-template-columns:
+    1fr 1fr;
+
   gap:10px;
 }
 
 .evidence{
   min-height:150px;
+
   border:1px solid #292929;
+
   background:#101010;
+
   padding:20px;
+
   border-radius:6px;
 }
 
 .evidence-number{
   color:#00d564;
+
   font-size:10px;
+
   font-weight:900;
+
   letter-spacing:2px;
 }
 
 .evidence-text{
   margin-top:18px;
+
   color:#ddd;
+
   font-size:13px;
+
   line-height:1.8;
 }
 
-/* 용의자 */
+
+/* =========================================
+   용의자
+========================================= */
 
 .suspect-title{
   margin:28px 0 12px;
+
   font-size:12px;
+
   color:#777;
+
   letter-spacing:2px;
+
   font-weight:900;
 }
 
 .suspects{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+
+  grid-template-columns:
+    repeat(4,1fr);
+
   gap:8px;
 }
 
 .suspect{
   border:1px solid #333;
+
   background:#111;
+
   color:#eee;
+
   padding:18px 10px;
+
   border-radius:5px;
+
   font-weight:900;
+
   text-align:center;
 }
 
@@ -419,25 +621,38 @@ button{
 
 .suspect.correct{
   background:#10351f;
+
   border-color:#00d564;
+
   color:#70ffad;
 }
 
 .suspect.wrong{
   background:#351414;
+
   border-color:#ff5b5b;
+
   color:#ff9292;
 }
 
-/* 결과 */
+
+/* =========================================
+   결과
+========================================= */
 
 .result{
   margin-top:15px;
+
   padding:20px;
+
   border:1px solid #333;
+
   background:#101010;
+
   border-radius:6px;
+
   font-size:13px;
+
   line-height:1.8;
 }
 
@@ -451,34 +666,52 @@ button{
 
 .back{
   width:100%;
+
   margin-top:12px;
+
   padding:15px;
+
   background:#111;
+
   border:1px solid #333;
+
   color:#eee;
+
   border-radius:5px;
 }
 
-/* 안내 */
+
+/* =========================================
+   안내
+========================================= */
 
 .notice{
   text-align:center;
+
   color:#555;
+
   font-size:10px;
+
   line-height:1.7;
+
   margin-top:25px;
 }
 
-/* 모바일 */
+
+/* =========================================
+   모바일
+========================================= */
 
 @media(max-width:800px){
 
   .modes{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:
+      1fr 1fr;
   }
 
   .suspects{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:
+      1fr 1fr;
   }
 
 }
@@ -495,6 +728,7 @@ button{
 
   .container{
     width:calc(100% - 24px);
+
     padding:35px 0;
   }
 
@@ -504,20 +738,24 @@ button{
 
   .hero h1{
     font-size:52px;
+
     letter-spacing:-4px;
   }
 
   .modes,
   .evidence-grid{
-    grid-template-columns:1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .channel{
-    grid-template-columns:1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .suspects{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:
+      1fr 1fr;
   }
 
   .game-title{
@@ -525,12 +763,16 @@ button{
   }
 
 }
+
 </style>
+
 </head>
+
 
 <body>
 
 <div class="page">
+
 
 <header class="header">
 
@@ -539,13 +781,21 @@ button{
   </div>
 
   <div class="header-right">
-    <div id="headerStatus" class="header-status">
+
+    <div
+      id="headerStatus"
+      class="header-status"
+    >
       채널 연결 안 됨
     </div>
 
-    <button id="loginTop" class="login-small">
+    <button
+      id="loginTop"
+      class="login-small"
+    >
       로그인
     </button>
+
   </div>
 
 </header>
@@ -554,11 +804,12 @@ button{
 <main class="container">
 
 
-<!-- =========================
+<!-- =====================================
      홈
-========================= -->
+===================================== -->
 
 <section id="home">
+
 
   <div class="hero">
 
@@ -576,18 +827,24 @@ button{
       시청자들의 대화가 하나의 사건이 됩니다.
     </p>
 
-    <button id="heroStart" class="main-button">
+    <button
+      id="heroStart"
+      class="main-button"
+    >
       사건 수사 시작
     </button>
 
   </div>
 
 
-  <!-- 채널 -->
+  <!-- ===================================
+       채널
+  =================================== -->
 
   <div class="card">
 
     <div class="card-head">
+
       <div class="card-title">
         수사 대상 채널
       </div>
@@ -595,7 +852,9 @@ button{
       <div class="card-sub">
         치지직 연결
       </div>
+
     </div>
+
 
     <div class="card-body">
 
@@ -603,17 +862,28 @@ button{
 
         <div>
 
-          <div id="channelName" class="channel-name">
+          <div
+            id="channelName"
+            class="channel-name"
+          >
             치지직 채널을 연결해주세요
           </div>
 
-          <div id="channelInfo" class="channel-info">
-            로그인하면 본인 방송의 실시간 채팅을 수집할 수 있습니다.
+          <div
+            id="channelInfo"
+            class="channel-info"
+          >
+            로그인하면 본인 방송의 실시간 채팅을
+            수집할 수 있습니다.
           </div>
 
         </div>
 
-        <button id="login" class="login-button">
+
+        <button
+          id="login"
+          class="login-button"
+        >
           치지직 로그인
         </button>
 
@@ -624,7 +894,9 @@ button{
   </div>
 
 
-  <!-- 모드 -->
+  <!-- ===================================
+       사건 선택
+  =================================== -->
 
   <div class="section">
 
@@ -635,35 +907,70 @@ button{
     <div class="modes">
 
       <div class="mode active">
-        <div class="mode-number">01</div>
-        <h3>오늘의 사건</h3>
+
+        <div class="mode-number">
+          01
+        </div>
+
+        <h3>
+          오늘의 사건
+        </h3>
+
         <p>
           채팅에서 하나의 사건을 발견합니다.
         </p>
+
       </div>
 
+
       <div class="mode">
-        <div class="mode-number">02</div>
-        <h3>미제 사건</h3>
+
+        <div class="mode-number">
+          02
+        </div>
+
+        <h3>
+          미제 사건
+        </h3>
+
         <p>
           여러 단서를 모아 사건을 해결합니다.
         </p>
+
       </div>
 
+
       <div class="mode">
-        <div class="mode-number">03</div>
-        <h3>장기 수사</h3>
+
+        <div class="mode-number">
+          03
+        </div>
+
+        <h3>
+          장기 수사
+        </h3>
+
         <p>
           제한 없이 천천히 추리합니다.
         </p>
+
       </div>
 
+
       <div class="mode">
-        <div class="mode-number">04</div>
-        <h3>야간 수사</h3>
+
+        <div class="mode-number">
+          04
+        </div>
+
+        <h3>
+          야간 수사
+        </h3>
+
         <p>
           끝없이 이어지는 채팅 추리입니다.
         </p>
+
       </div>
 
     </div>
@@ -671,13 +978,16 @@ button{
   </div>
 
 
-  <!-- 채팅 -->
+  <!-- ===================================
+       실시간 채팅
+  =================================== -->
 
   <div class="section">
 
     <div class="section-title">
       실시간 채팅
     </div>
+
 
     <div class="card">
 
@@ -687,34 +997,59 @@ button{
           방송 채팅 기록
         </div>
 
-        <div id="chatCount" class="card-sub">
+        <div
+          id="chatCount"
+          class="card-sub"
+        >
           채팅 0개
         </div>
 
       </div>
 
+
       <div class="card-body">
 
         <div class="live-control">
 
-          <button id="start" class="live-button start">
+          <button
+            id="start"
+            class="live-button start"
+          >
             채팅 수집 시작
           </button>
 
-          <button id="stop" class="live-button">
+          <button
+            id="stop"
+            class="live-button"
+          >
             수집 중지
           </button>
 
         </div>
 
-        <div id="liveStatus" class="chat-status">
+
+        <div
+          id="liveStatus"
+          class="chat-status"
+        >
           로그인 후 채팅 수집을 시작해주세요.
         </div>
 
-        <div id="chatlog" class="chatlog">
-          <div style="color:#555;font-size:12px;">
+
+        <div
+          id="chatlog"
+          class="chatlog"
+        >
+
+          <div
+            style="
+              color:#555;
+              font-size:12px;
+            "
+          >
             아직 수집된 채팅이 없습니다.
           </div>
+
         </div>
 
       </div>
@@ -723,32 +1058,48 @@ button{
 
   </div>
 
-<button
-  id="history"
-  class="back"
-  style="margin-bottom:12px;"
->
-  저장된 채팅 내역 불러오기
-</button>
 
-  <button id="open" class="main-button" style="width:100%;">
+  <!-- ===================================
+       저장된 채팅
+  =================================== -->
+
+  <button
+    id="history"
+    class="back"
+    style="margin-bottom:12px;"
+  >
+    저장된 채팅 내역 불러오기
+  </button>
+
+
+  <button
+    id="open"
+    class="main-button"
+    style="width:100%;"
+  >
     채팅으로 사건 만들기
   </button>
 
 
   <div class="notice">
+
     후던챗의 사건은 실제 인물을 범죄자로 지목하지 않는<br>
     허구의 추리 게임 콘텐츠입니다.
+
   </div>
+
 
 </section>
 
 
-<!-- =========================
+<!-- =====================================
      게임
-========================= -->
+===================================== -->
 
-<section id="game" class="game hidden">
+<section
+  id="game"
+  class="game hidden"
+>
 
   <div class="game-top">
 
@@ -756,7 +1107,10 @@ button{
       최고 수배 사건
     </span>
 
-    <span id="count" class="tag">
+    <span
+      id="count"
+      class="tag"
+    >
       용의자 0명
     </span>
 
@@ -767,7 +1121,11 @@ button{
     범인은 누구인가?
   </h1>
 
-  <p id="brief" class="brief">
+
+  <p
+    id="brief"
+    class="brief"
+  >
     사건을 분석하고 있습니다.
   </p>
 
@@ -776,7 +1134,11 @@ button{
     확보된 증거
   </div>
 
-  <div id="exhibits" class="evidence-grid">
+
+  <div
+    id="exhibits"
+    class="evidence-grid"
+  >
   </div>
 
 
@@ -784,19 +1146,30 @@ button{
     용의자 선택
   </div>
 
-  <div id="choices" class="suspects">
+
+  <div
+    id="choices"
+    class="suspects"
+  >
   </div>
 
 
-  <div id="result" class="result hidden">
+  <div
+    id="result"
+    class="result hidden"
+  >
   </div>
 
 
-  <button id="back" class="back">
+  <button
+    id="back"
+    class="back"
+  >
     사건 목록으로 돌아가기
   </button>
 
 </section>
+
 
 </main>
 
@@ -805,170 +1178,390 @@ button{
 
 <script>
 
-/* 날짜가 필요한 경우를 위한 현재 날짜 */
+
+/* =========================================
+   전역 상태
+========================================= */
 
 let messages = [];
+
 let polling = null;
 
 
-/* 로그인 버튼 */
+/* =========================================
+   로그인 버튼
+========================================= */
 
-document.getElementById("login").onclick = () => {
-  location.href = "/auth/login";
-};
+document
+  .getElementById("login")
+  .onclick = () => {
 
-document.getElementById("loginTop").onclick = () => {
-  location.href = "/auth/login";
-};
+    location.href =
+      "/auth/login";
+
+  };
 
 
-/* 로그인 상태 확인 */
+document
+  .getElementById("loginTop")
+  .onclick = () => {
+
+    location.href =
+      "/auth/login";
+
+  };
+
+
+/* =========================================
+   로그인 상태 확인
+   서버:
+   GET /api/auth/status
+========================================= */
 
 async function checkLogin(){
 
   try{
 
     const response =
-      await fetch("/api/me");
+      await fetch(
+        "/api/auth/status",
+        {
+          method:"GET",
+
+          credentials:"same-origin",
+
+          cache:"no-store"
+        }
+      );
+
 
     const data =
       await response.json();
 
-    if(data.loggedIn){
 
-      document.getElementById("login").textContent =
+    console.log(
+      "🔐 로그인 상태:",
+      data
+    );
+
+
+    if(
+      data.ok &&
+      data.loggedIn
+    ){
+
+      const user =
+        data.user || {};
+
+      const channelName =
+        user.channelName ||
+        user.nickname ||
+        user.channel?.channelName ||
+        "치지직 채널";
+
+
+      /* ===============================
+         채널 카드
+      =============================== */
+
+      document
+        .getElementById("channelName")
+        .textContent =
+          channelName;
+
+
+      document
+        .getElementById("channelInfo")
+        .textContent =
+          "치지직 로그인 완료 · 실시간 방송 채팅을 수집할 수 있습니다.";
+
+
+      /* ===============================
+         로그인 버튼
+      =============================== */
+
+      const loginButton =
+        document.getElementById("login");
+
+
+      loginButton.textContent =
         "치지직 연결됨";
 
-      document.getElementById("login").disabled = true;
 
-      document.getElementById("loginTop").textContent =
+      loginButton.disabled =
+        true;
+
+
+      loginButton.classList.add(
+        "connected"
+      );
+
+
+      /* ===============================
+         상단
+      =============================== */
+
+      const loginTop =
+        document.getElementById(
+          "loginTop"
+        );
+
+
+      loginTop.textContent =
         "연결됨";
 
-      document.getElementById("loginTop").disabled = true;
 
-      document.getElementById("headerStatus").textContent =
-        "채널 연결됨";
+      loginTop.disabled =
+        true;
 
-      document.getElementById("channelName").textContent =
-        data.me.channelName;
 
-      document.getElementById("channelInfo").textContent =
-        "실시간 방송 채팅을 수집할 준비가 되었습니다.";
+      const headerStatus =
+        document.getElementById(
+          "headerStatus"
+        );
+
+
+      headerStatus.textContent =
+        `${channelName} 연결됨`;
+
+
+      headerStatus.style.color =
+        "#00d564";
+
+
+      /* ===============================
+         채팅 상태
+      =============================== */
+
+      document
+        .getElementById("liveStatus")
+        .textContent =
+          "로그인 완료. 방송 중이라면 채팅 수집을 시작할 수 있습니다.";
+
+
+      console.log(
+        "✅ 화면 로그인 상태 반영 완료"
+      );
+
+    }else{
+
+      console.log(
+        "ℹ️ 현재 로그인되어 있지 않습니다."
+      );
 
     }
 
   }catch(error){
 
-    console.error(error);
+    console.error(
+      "❌ 로그인 상태 확인 오류:",
+      error
+    );
 
   }
 
 }
 
+
+/* 페이지가 열릴 때 로그인 확인 */
+
 checkLogin();
 
 
-/* 메인 시작 버튼 */
+/* =========================================
+   메인 시작 버튼
+========================================= */
 
-document.getElementById("heroStart").onclick = () => {
+document
+  .getElementById("heroStart")
+  .onclick = () => {
 
-  document.getElementById("start").scrollIntoView({
-    behavior:"smooth",
-    block:"center"
-  });
+    document
+      .getElementById("start")
+      .scrollIntoView({
+        behavior:"smooth",
+        block:"center"
+      });
 
-};
+  };
 
 
-/* 채팅 수집 시작 */
+/* =========================================
+   채팅 수집 시작
+   서버:
+   POST /api/live/start
+========================================= */
 
-document.getElementById("start").onclick =
-async () => {
+document
+  .getElementById("start")
+  .onclick =
+  async () => {
 
-  try{
+    try{
 
-    const response =
-      await fetch(
-        "/api/live/start",
-        {
-          method:"POST"
-        }
+      const response =
+        await fetch(
+          "/api/live/start",
+          {
+            method:"POST",
+
+            credentials:"same-origin",
+
+            headers:{
+              "Content-Type":
+                "application/json"
+            }
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      console.log(
+        "📡 방송 감시 시작:",
+        data
       );
 
-    const data =
-      await response.json();
 
-    if(!response.ok){
+      if(
+        response.status === 401
+      ){
+
+        alert(
+          "먼저 치지직 로그인을 해주세요."
+        );
+
+        return;
+
+      }
+
+
+      if(!response.ok){
+
+        alert(
+          data.message ||
+          "채팅 수집을 시작할 수 없습니다."
+        );
+
+        return;
+
+      }
+
+
+      document
+        .getElementById("liveStatus")
+        .textContent =
+          "방송 상태를 확인하고 있습니다. 방송 중이면 실시간 채팅 수집을 시작합니다.";
+
+
+      if(polling){
+
+        clearInterval(
+          polling
+        );
+
+      }
+
+
+      polling =
+        setInterval(
+          loadMessages,
+          1000
+        );
+
+
+      loadMessages();
+
+
+    }catch(error){
+
+      console.error(
+        "❌ 방송 감시 시작 오류:",
+        error
+      );
+
 
       alert(
-        data.error ||
-        "채팅 수집을 시작할 수 없습니다."
+        "서버에 연결할 수 없습니다."
       );
 
-      return;
+    }
+
+  };
+
+
+/* =========================================
+   채팅 수집 중지
+   서버:
+   POST /api/live/stop
+========================================= */
+
+document
+  .getElementById("stop")
+  .onclick =
+  async () => {
+
+    try{
+
+      const response =
+        await fetch(
+          "/api/live/stop",
+          {
+            method:"POST",
+
+            credentials:"same-origin"
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      console.log(
+        "🛑 방송 감시 중지:",
+        data
+      );
+
+
+    }catch(error){
+
+      console.error(
+        "❌ 수집 중지 오류:",
+        error
+      );
 
     }
 
-
-    document.getElementById("liveStatus").textContent =
-      "실시간 채팅을 수집하고 있습니다.";
 
     if(polling){
-      clearInterval(polling);
+
+      clearInterval(
+        polling
+      );
+
+      polling =
+        null;
+
     }
 
-    polling =
-      setInterval(loadMessages,1000);
 
-    loadMessages();
+    document
+      .getElementById("liveStatus")
+      .textContent =
+        "채팅 수집을 중지했습니다.";
 
-  }catch(error){
-
-    alert(
-      "서버에 연결할 수 없습니다."
-    );
-
-  }
-
-};
+  };
 
 
-/* 채팅 수집 중지 */
+/* =========================================
+   최근 채팅 불러오기
 
-document.getElementById("stop").onclick =
-async () => {
-
-  try{
-
-    await fetch(
-      "/api/live/stop",
-      {
-        method:"POST"
-      }
-    );
-
-  }catch(error){
-
-    console.error(error);
-
-  }
-
-
-  if(polling){
-
-    clearInterval(polling);
-    polling = null;
-
-  }
-
-
-  document.getElementById("liveStatus").textContent =
-    "채팅 수집을 중지했습니다.";
-
-};
-
-
-/* 채팅 불러오기 */
+   서버:
+   GET /api/chat/messages
+========================================= */
 
 async function loadMessages(){
 
@@ -976,30 +1569,76 @@ async function loadMessages(){
 
     const response =
       await fetch(
-        "/api/live/messages"
+        "/api/chat/messages",
+        {
+          method:"GET",
+
+          credentials:"same-origin",
+
+          cache:"no-store"
+        }
       );
+
 
     const data =
       await response.json();
+
+
+    console.log(
+      "💬 채팅 상태:",
+      data
+    );
+
+
+    if(
+      response.status === 401
+    ){
+
+      document
+        .getElementById("liveStatus")
+        .textContent =
+          "로그인이 필요합니다.";
+
+      return;
+
+    }
+
+
+    if(!response.ok){
+
+      return;
+
+    }
+
 
     messages =
       data.messages || [];
 
 
-    document.getElementById("chatCount").textContent =
-      `채팅 ${messages.length}개`;
+    document
+      .getElementById("chatCount")
+      .textContent =
+        `채팅 ${messages.length}개`;
 
 
     const chatlog =
-      document.getElementById("chatlog");
+      document.getElementById(
+        "chatlog"
+      );
 
 
     if(messages.length === 0){
 
-      chatlog.innerHTML =
-        `<div style="color:#555;font-size:12px;">
+      chatlog.innerHTML = `
+        <div
+          style="
+            color:#555;
+            font-size:12px;
+          "
+        >
           아직 수집된 채팅이 없습니다.
-        </div>`;
+        </div>
+      `;
 
       return;
 
@@ -1009,41 +1648,59 @@ async function loadMessages(){
     chatlog.innerHTML =
 
       messages
-      .slice(-100)
-     .map(message => {
+        .slice(-100)
+        .map(
+          message => {
 
-  const time =
-    message.timestamp
-      ? new Date(
-          Number(message.timestamp)
-        ).toLocaleString("ko-KR", {
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit"
-        })
-      : "";
+            const time =
+              message.timestamp
+                ? new Date(
+                    Number(
+                      message.timestamp
+                    )
+                  ).toLocaleString(
+                    "ko-KR",
+                    {
+                      month:"2-digit",
+                      day:"2-digit",
+                      hour:"2-digit",
+                      minute:"2-digit"
+                    }
+                  )
+                : "";
 
-  return `
-    <div class="chat-row">
 
-      <span style="color:#555;font-size:10px;margin-right:8px;">
-        ${escapeHtml(time)}
-      </span>
+            return `
+              <div class="chat-row">
 
-      <span class="chat-name">
-        ${escapeHtml(message.nickname)}
-      </span>
+                <span
+                  style="
+                    color:#555;
+                    font-size:10px;
+                    margin-right:8px;
+                  "
+                >
+                  ${escapeHtml(time)}
+                </span>
 
-      <span class="chat-content">
-        ${escapeHtml(message.content)}
-      </span>
+                <span class="chat-name">
+                  ${escapeHtml(
+                    message.nickname
+                  )}
+                </span>
 
-    </div>
-  `;
+                <span class="chat-content">
+                  ${escapeHtml(
+                    message.content
+                  )}
+                </span>
 
-})
-      .join("");
+              </div>
+            `;
+
+          }
+        )
+        .join("");
 
 
     chatlog.scrollTop =
@@ -1052,7 +1709,10 @@ async function loadMessages(){
 
   }catch(error){
 
-    console.error(error);
+    console.error(
+      "❌ 채팅 조회 오류:",
+      error
+    );
 
   }
 
@@ -1063,532 +1723,686 @@ async function loadMessages(){
    저장된 채팅으로 사건 생성
 ========================================= */
 
-document.getElementById("open").onclick = async () => {
+document
+  .getElementById("open")
+  .onclick =
+  async () => {
 
-  const button =
-    document.getElementById("open");
-
-  button.disabled = true;
-
-  button.textContent =
-    "저장된 채팅을 불러오는 중...";
-
-
-  try {
-
-    /*
-     * 서버에 저장된 전체 채팅 가져오기
-     */
-
-    const historyResponse =
-      await fetch(
-        "/api/chat/history"
+    const button =
+      document.getElementById(
+        "open"
       );
 
 
-    const historyData =
-      await historyResponse.json();
+    button.disabled =
+      true;
 
 
-    if (!historyResponse.ok) {
-
-      throw new Error(
-        historyData.error ||
-        "저장된 채팅을 불러오지 못했습니다."
-      );
-
-    }
+    button.textContent =
+      "저장된 채팅을 불러오는 중...";
 
 
-    const savedMessages =
-      historyData.messages || [];
+    try{
+
+      const historyResponse =
+        await fetch(
+          "/api/chat/history",
+          {
+            method:"GET",
+
+            credentials:"same-origin",
+
+            cache:"no-store"
+          }
+        );
 
 
-    /*
-     * 현재 화면의 채팅과
-     * 서버에 저장된 채팅 합치기
-     */
-
-    const mergedMessages = [
-      ...savedMessages,
-      ...messages
-    ];
+      const historyData =
+        await historyResponse.json();
 
 
-    /*
-     * 중복 제거
-     */
+      if(
+        historyResponse.status === 401
+      ){
 
-    const uniqueMessages = [];
+        throw new Error(
+          "먼저 치지직 로그인을 해주세요."
+        );
 
-    const seen = new Set();
-
-
-    for (const message of mergedMessages) {
-
-      const id =
-        message.id ||
-        [
-          message.timestamp,
-          message.nickname,
-          message.content
-        ].join("|");
-
-
-      if (seen.has(id)) {
-        continue;
       }
 
 
-      seen.add(id);
+      if(!historyResponse.ok){
 
-      uniqueMessages.push(message);
+        throw new Error(
+          historyData.message ||
+          historyData.error ||
+          "저장된 채팅을 불러오지 못했습니다."
+        );
 
-    }
-
-
-    messages =
-      uniqueMessages;
-
-
-    /*
-     * 채팅이 너무 적으면 사건 생성하지 않음
-     */
-
-    if (messages.length < 3) {
-
-      alert(
-        "저장된 채팅이 최소 3개 이상 필요합니다."
-      );
-
-      return;
-
-    }
+      }
 
 
-    button.textContent =
-      "사건을 분석하고 있습니다...";
+      const savedMessages =
+        historyData.messages || [];
 
 
-    /*
-     * 저장된 전체 채팅을 AI 사건 생성기로 전달
-     */
+      const mergedMessages = [
 
-    const response =
-      await fetch(
-        "/api/case",
-        {
-          method: "POST",
+        ...savedMessages,
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+        ...messages
 
-          body: JSON.stringify({
+      ];
 
-            messages:
-              messages
 
-          })
+      const uniqueMessages = [];
+
+      const seen =
+        new Set();
+
+
+      for(
+        const message
+        of mergedMessages
+      ){
+
+        const id =
+          message.id ||
+          [
+            message.timestamp,
+            message.nickname,
+            message.content
+          ].join("|");
+
+
+        if(
+          seen.has(id)
+        ){
+
+          continue;
 
         }
+
+
+        seen.add(id);
+
+        uniqueMessages.push(
+          message
+        );
+
+      }
+
+
+      messages =
+        uniqueMessages;
+
+
+      if(
+        messages.length < 3
+      ){
+
+        alert(
+          "저장된 채팅이 최소 3개 이상 필요합니다."
+        );
+
+        return;
+
+      }
+
+
+      button.textContent =
+        "사건을 분석하고 있습니다...";
+
+
+      const response =
+        await fetch(
+          "/api/case",
+          {
+            method:"POST",
+
+            credentials:"same-origin",
+
+            headers:{
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                messages
+              })
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if(!response.ok){
+
+        throw new Error(
+          data.message ||
+          data.error ||
+          "사건 생성에 실패했습니다."
+        );
+
+      }
+
+
+      renderCase(
+        data
       );
 
 
-    const data =
-      await response.json();
+      document
+        .getElementById("home")
+        .classList
+        .add("hidden");
 
 
-    if (!response.ok) {
+      document
+        .getElementById("game")
+        .classList
+        .remove("hidden");
 
-      throw new Error(
-        data.error ||
-        "사건 생성에 실패했습니다."
+
+      window.scrollTo({
+        top:0,
+        behavior:"smooth"
+      });
+
+
+    }catch(error){
+
+      console.error(
+        "❌ 사건 생성 오류:",
+        error
       );
+
+
+      alert(
+        error.message ||
+        "사건을 생성하는 중 오류가 발생했습니다."
+      );
+
+
+    }finally{
+
+      button.disabled =
+        false;
+
+      button.textContent =
+        "채팅으로 사건 만들기";
 
     }
 
-
-    renderCase(data);
-
-
-    document
-      .getElementById("home")
-      .classList
-      .add("hidden");
+  };
 
 
-    document
-      .getElementById("game")
-      .classList
-      .remove("hidden");
+/* =========================================
+   사건 표시
+========================================= */
 
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "사건 생성 오류:",
-      error
-    );
-
-
-    alert(
-      error.message ||
-      "사건을 생성하는 중 오류가 발생했습니다."
-    );
-
-
-  } finally {
-
-    button.disabled = false;
-
-    button.textContent =
-      "채팅으로 사건 만들기";
-
-  }
-
-};
-
-/* 사건 표시 */
-
-function renderCase(data){
+function renderCase(
+  data
+){
 
   const suspects =
     data.suspects || [];
 
 
-  document.getElementById("count").textContent =
-    `용의자 ${suspects.length}명`;
-
-
-  document.getElementById("brief").textContent =
-    data.brief ||
-    "확보된 증거를 검토하고 범인을 찾아보세요.";
-
-
-  /* 증거 */
-
-  document.getElementById("exhibits").innerHTML =
-
-    (data.exhibits || [])
-    .slice(0,6)
-    .map((item,index) => {
-
-      return `
-        <div class="evidence">
-
-          <div class="evidence-number">
-            증거 ${String(index+1).padStart(2,"0")}
-          </div>
-
-          <div class="evidence-text">
-            ${escapeHtml(item.text)}
-          </div>
-
-        </div>
-      `;
-
-    })
-    .join("");
-
-
-  /* 용의자 */
-
-  document.getElementById("choices").innerHTML =
-
-    suspects
-    .map(name => {
-
-      return `
-        <button
-          class="suspect"
-          data-name="${escapeHtml(name)}"
-        >
-          ${escapeHtml(name)}
-        </button>
-      `;
-
-    })
-    .join("");
+  document
+    .getElementById("count")
+    .textContent =
+      `용의자 ${suspects.length}명`;
 
 
   document
-  .querySelectorAll(".suspect")
-  .forEach(button => {
-
-    button.onclick = () => {
-
-      const selected =
-        button.dataset.name;
-
-      const correct =
-        selected === data.suspect;
+    .getElementById("brief")
+    .textContent =
+      data.brief ||
+      "확보된 증거를 검토하고 범인을 찾아보세요.";
 
 
-      document
-      .querySelectorAll(".suspect")
-      .forEach(item => {
+  document
+    .getElementById("exhibits")
+    .innerHTML =
 
-        item.classList.remove(
-          "correct",
-          "wrong"
-        );
+      (data.exhibits || [])
+        .slice(0,6)
+        .map(
+          (item,index) => {
 
-      });
+            return `
+              <div class="evidence">
+
+                <div class="evidence-number">
+                  증거
+                  ${String(
+                    index + 1
+                  ).padStart(
+                    2,
+                    "0"
+                  )}
+                </div>
+
+                <div class="evidence-text">
+                  ${escapeHtml(
+                    item.text
+                  )}
+                </div>
+
+              </div>
+            `;
+
+          }
+        )
+        .join("");
 
 
-      const result =
-        document.getElementById("result");
+  document
+    .getElementById("choices")
+    .innerHTML =
+
+      suspects
+        .map(
+          name => {
+
+            return `
+              <button
+                class="suspect"
+                data-name="${escapeHtml(
+                  name
+                )}"
+              >
+                ${escapeHtml(
+                  name
+                )}
+              </button>
+            `;
+
+          }
+        )
+        .join("");
 
 
-      if(correct){
+  document
+    .querySelectorAll(".suspect")
+    .forEach(
+      button => {
 
-        button.classList.add("correct");
+        button.onclick =
+          () => {
 
-        result.className =
-          "result result-success";
+            const selected =
+              button.dataset.name;
 
-        result.innerHTML =
-          `
-            <strong>사건 해결!</strong>
-            <br>
-            정확하게 범인을 찾아냈습니다.
-          `;
 
-      }else{
+            const correct =
+              selected ===
+              data.suspect;
 
-        button.classList.add("wrong");
 
-        result.className =
-          "result result-fail";
+            document
+              .querySelectorAll(
+                ".suspect"
+              )
+              .forEach(
+                item => {
 
-        result.innerHTML =
-          `
-            <strong>잘못된 용의자입니다.</strong>
-            <br>
-            증거를 다시 살펴보세요.
-            <br><br>
-            정답은
-            <strong>
-              ${escapeHtml(data.suspect)}
-            </strong>
-            입니다.
-          `;
+                  item.classList.remove(
+                    "correct",
+                    "wrong"
+                  );
+
+                }
+              );
+
+
+            const result =
+              document.getElementById(
+                "result"
+              );
+
+
+            result.classList.remove(
+              "hidden"
+            );
+
+
+            if(correct){
+
+              button.classList.add(
+                "correct"
+              );
+
+
+              result.className =
+                "result result-success";
+
+
+              result.innerHTML = `
+                <strong>
+                  사건 해결!
+                </strong>
+                <br>
+                정확하게 범인을 찾아냈습니다.
+              `;
+
+            }else{
+
+              button.classList.add(
+                "wrong"
+              );
+
+
+              result.className =
+                "result result-fail";
+
+
+              result.innerHTML = `
+                <strong>
+                  잘못된 용의자입니다.
+                </strong>
+                <br>
+                증거를 다시 살펴보세요.
+                <br><br>
+                정답은
+                <strong>
+                  ${escapeHtml(
+                    data.suspect
+                  )}
+                </strong>
+                입니다.
+              `;
+
+            }
+
+          };
 
       }
-
-    };
-
-  });
+    );
 
 }
 
 
-/* 뒤로가기 */
+/* =========================================
+   뒤로가기
+========================================= */
 
-document.getElementById("back").onclick = () => {
+document
+  .getElementById("back")
+  .onclick =
+  () => {
 
-  document
-    .getElementById("game")
-    .classList
-    .add("hidden");
-
-  document
-    .getElementById("home")
-    .classList
-    .remove("hidden");
-
-  document
-    .getElementById("result")
-    .classList
-    .add("hidden");
-
-  window.scrollTo({
-    top:0,
-    behavior:"smooth"
-  });
-
-};
+    document
+      .getElementById("game")
+      .classList
+      .add("hidden");
 
 
-/* 특수문자 처리 */
+    document
+      .getElementById("home")
+      .classList
+      .remove("hidden");
 
-function escapeHtml(value){
 
-  return String(value ?? "")
+    document
+      .getElementById("result")
+      .classList
+      .add("hidden");
+
+
+    window.scrollTo({
+      top:0,
+      behavior:"smooth"
+    });
+
+  };
+
+
+/* =========================================
+   저장된 채팅 내역 보기
+========================================= */
+
+document
+  .getElementById("history")
+  .onclick =
+  async () => {
+
+    const button =
+      document.getElementById(
+        "history"
+      );
+
+
+    try{
+
+      button.disabled =
+        true;
+
+
+      button.textContent =
+        "채팅 내역을 불러오는 중...";
+
+
+      const response =
+        await fetch(
+          "/api/chat/history",
+          {
+            method:"GET",
+
+            credentials:"same-origin",
+
+            cache:"no-store"
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if(
+        response.status === 401
+      ){
+
+        throw new Error(
+          "먼저 치지직 로그인을 해주세요."
+        );
+
+      }
+
+
+      if(!response.ok){
+
+        throw new Error(
+          data.message ||
+          data.error ||
+          "채팅 내역을 불러오지 못했습니다."
+        );
+
+      }
+
+
+      messages =
+        data.messages || [];
+
+
+      document
+        .getElementById(
+          "chatCount"
+        )
+        .textContent =
+          `채팅 ${messages.length}개`;
+
+
+      const chatlog =
+        document.getElementById(
+          "chatlog"
+        );
+
+
+      if(
+        messages.length === 0
+      ){
+
+        chatlog.innerHTML = `
+          <div
+            style="
+              color:#555;
+              font-size:12px;
+            "
+          >
+            저장된 채팅이 없습니다.
+          </div>
+        `;
+
+        return;
+
+      }
+
+
+      chatlog.innerHTML =
+
+        messages
+          .slice(-100)
+          .map(
+            message => {
+
+              const time =
+                message.timestamp
+                  ? new Date(
+                      Number(
+                        message.timestamp
+                      )
+                    ).toLocaleString(
+                      "ko-KR",
+                      {
+                        month:"2-digit",
+                        day:"2-digit",
+                        hour:"2-digit",
+                        minute:"2-digit"
+                      }
+                    )
+                  : "";
+
+
+              return `
+                <div class="chat-row">
+
+                  <span
+                    style="
+                      color:#555;
+                      font-size:10px;
+                      margin-right:8px;
+                    "
+                  >
+                    ${escapeHtml(
+                      time
+                    )}
+                  </span>
+
+                  <span class="chat-name">
+                    ${escapeHtml(
+                      message.nickname
+                    )}
+                  </span>
+
+                  <span class="chat-content">
+                    ${escapeHtml(
+                      message.content
+                    )}
+                  </span>
+
+                </div>
+              `;
+
+            }
+          )
+          .join("");
+
+
+      chatlog.scrollTop =
+        chatlog.scrollHeight;
+
+
+      document
+        .getElementById(
+          "liveStatus"
+        )
+        .textContent =
+          `저장된 채팅 ${messages.length}개를 불러왔습니다.`;
+
+
+    }catch(error){
+
+      console.error(
+        "❌ 채팅 내역 조회 오류:",
+        error
+      );
+
+
+      alert(
+        error.message ||
+        "채팅 내역을 불러오지 못했습니다."
+      );
+
+
+    }finally{
+
+      button.disabled =
+        false;
+
+
+      button.textContent =
+        "저장된 채팅 내역 불러오기";
+
+    }
+
+  };
+
+
+/* =========================================
+   특수문자 처리
+========================================= */
+
+function escapeHtml(
+  value
+){
+
+  return String(
+    value ?? ""
+  )
     .replace(
       /[&<>"']/g,
       character => {
 
         const table = {
+
           "&":"&amp;",
+
           "<":"&lt;",
+
           ">":"&gt;",
+
           '"':"&quot;",
+
           "'":"&#39;"
+
         };
 
-        return table[character];
+
+        return table[
+          character
+        ];
 
       }
     );
 
 }
-/* =========================================
-   저장된 채팅 내역 보기
-========================================= */
-
-document.getElementById("history").onclick =
-async () => {
-
-  const button =
-    document.getElementById("history");
-
-  try {
-
-    button.disabled = true;
-
-    button.textContent =
-      "채팅 내역을 불러오는 중...";
-
-
-    const response =
-      await fetch(
-        "/api/chat/history"
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        data.error ||
-        "채팅 내역을 불러오지 못했습니다."
-      );
-
-    }
-
-
-    messages =
-      data.messages || [];
-
-
-    document.getElementById(
-      "chatCount"
-    ).textContent =
-      `채팅 ${messages.length}개`;
-
-
-    const chatlog =
-      document.getElementById(
-        "chatlog"
-      );
-
-
-    if (messages.length === 0) {
-
-      chatlog.innerHTML = `
-        <div style="color:#555;font-size:12px;">
-          저장된 채팅이 없습니다.
-        </div>
-      `;
-
-      return;
-
-    }
-
-
-    chatlog.innerHTML =
-
-    messages
-  .slice(-100)
-  .map(message => {
-
-    const time =
-      message.timestamp
-        ? new Date(
-            Number(message.timestamp)
-          ).toLocaleString("ko-KR", {
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit"
-          })
-        : "";
-
-    return `
-      <div class="chat-row">
-
-        <span
-          style="
-            color:#555;
-            font-size:10px;
-            margin-right:8px;
-          "
-        >
-          ${escapeHtml(time)}
-        </span>
-
-        <span class="chat-name">
-          ${escapeHtml(
-            message.nickname
-          )}
-        </span>
-
-        <span class="chat-content">
-          ${escapeHtml(
-            message.content
-          )}
-        </span>
-
-      </div>
-    `;
-
-  })
-        .join("");
-
-
-    chatlog.scrollTop =
-      chatlog.scrollHeight;
-
-
-    document.getElementById(
-      "liveStatus"
-    ).textContent =
-      `저장된 채팅 ${messages.length}개를 불러왔습니다.`;
-
-  } catch (error) {
-
-    console.error(
-      "채팅 내역 조회 오류:",
-      error
-    );
-
-    alert(
-      error.message ||
-      "채팅 내역을 불러오지 못했습니다."
-    );
-
-  } finally {
-
-    button.disabled = false;
-
-    button.textContent =
-      "저장된 채팅 내역 불러오기";
-
-  }
-
-};
 
 </script>
 
