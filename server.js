@@ -2,6 +2,10 @@
    방송 감시
 ========================================= */
 
+/* =========================================
+   방송 감시
+========================================= */
+
 async function checkLiveWatcher(channelId) {
 
   const watcher =
@@ -11,9 +15,7 @@ async function checkLiveWatcher(channelId) {
     return;
   }
 
-  /*
-   * 이미 확인 중이면 중복 실행 방지
-   */
+  // 이미 확인 중이면 중복 실행 방지
   if (watcher.checking) {
     return;
   }
@@ -22,6 +24,10 @@ async function checkLiveWatcher(channelId) {
 
   try {
 
+    console.log(
+      `[방송 감시] ${new Date().toLocaleTimeString("ko-KR")} 방송 상태 확인`
+    );
+
     const live =
       await getCurrentLive(channelId);
 
@@ -29,86 +35,44 @@ async function checkLiveWatcher(channelId) {
       !!live;
 
     /*
-     * 방송 시작
-     */
-
-    if (
-      isLive &&
-      !watcher.isLive
-    ) {
-
-      console.log("");
-      console.log(
-        "================================="
-      );
-      console.log(
-        "🔴 방송 시작 감지"
-      );
-      console.log(
-        "채널 ID:",
-        channelId
-      );
-      console.log(
-        "방송 ID:",
-        live.liveId
-      );
-      console.log(
-        "방송 제목:",
-        live.liveTitle
-      );
-      console.log(
-        "================================="
-      );
-
-      watcher.isLive = true;
-      watcher.liveId = live.liveId;
-      watcher.liveInfo = live;
-
-      try {
-
-        await startChatCollection(
-          watcher.req
-        );
-
-        console.log(
-          "✅ 방송 시작 → 채팅 자동 수집 시작"
-        );
-
-      } catch (error) {
-
-        console.error(
-          "❌ 채팅 수집 시작 실패:",
-          error.message
-        );
-
-      }
-    }
-
-    /*
+     * =====================================
      * 방송 중
+     * =====================================
      */
 
     if (isLive) {
 
+      const previousLiveId =
+        watcher.liveId;
+
       watcher.isLive = true;
-      watcher.liveId = live.liveId;
-      watcher.liveInfo = live;
+      watcher.liveId =
+        live.liveId || null;
+
+      watcher.liveInfo =
+        live;
+
+      console.log(
+        "🔴 현재 방송 중:",
+        live.liveTitle || "(제목 없음)"
+      );
+
+      console.log(
+        "방송 ID:",
+        live.liveId
+      );
 
       /*
-       * 방송은 켜져 있는데
-       * 채팅 연결이 끊겼으면 다시 연결
+       * 새로운 방송이 시작된 경우
        */
 
-      const connection =
-        chatConnections.get(channelId);
-
       if (
-        !connection ||
-        !connection.collecting
+        !previousLiveId ||
+        previousLiveId !== live.liveId
       ) {
 
         console.log(
-          "⚠️ 방송 중인데 채팅 연결 없음 → 재연결"
+          "🆕 새로운 방송 감지"
         );
 
         try {
@@ -117,81 +81,154 @@ async function checkLiveWatcher(channelId) {
             watcher.req
           );
 
+          console.log(
+            "✅ 새로운 방송 → 채팅 수집 시작"
+          );
+
         } catch (error) {
 
           console.error(
-            "채팅 자동 재연결 실패:",
+            "❌ 채팅 수집 시작 실패:",
             error.message
           );
 
         }
 
       }
-    }
 
-    /*
-     * 방송 종료
-     */
+      /*
+       * 방송 중인데 채팅 연결이 없는 경우
+       */
 
-    if (
-      !isLive &&
-      watcher.isLive
-    ) {
-
-      console.log("");
-      console.log(
-        "================================="
-      );
-      console.log(
-        "⚫ 방송 종료 감지"
-      );
-      console.log(
-        "채널 ID:",
-        channelId
-      );
-      console.log(
-        "================================="
-      );
-
-      try {
-
-        stopChatCollection(
-          watcher.req
+      const connection =
+        chatConnections.get(
+          channelId
         );
 
-      } catch (error) {
+      if (
+        !connection ||
+        !connection.collecting
+      ) {
 
-        console.error(
-          "방송 종료 처리 오류:",
-          error
+        console.log(
+          "⚠️ 방송 중인데 채팅 연결 없음"
         );
+
+        console.log(
+          "🔄 채팅 연결 재시도"
+        );
+
+        try {
+
+          await startChatCollection(
+            watcher.req
+          );
+
+          console.log(
+            "✅ 채팅 자동 재연결 성공"
+          );
+
+        } catch (error) {
+
+          console.error(
+            "❌ 채팅 자동 재연결 실패:",
+            error.message
+          );
+
+        }
 
       }
 
-      watcher.isLive = false;
-      watcher.liveId = null;
-      watcher.liveInfo = null;
+    }
+
+    /*
+     * =====================================
+     * 방송 종료
+     * =====================================
+     */
+
+    else {
+
+      /*
+       * 실제로 방송 중이었다가
+       * 종료된 경우에만 종료 처리
+       */
+
+      if (watcher.isLive) {
+
+        console.log("");
+        console.log(
+          "================================="
+        );
+        console.log(
+          "⚫ 방송 종료 감지"
+        );
+        console.log(
+          "채널 ID:",
+          channelId
+        );
+        console.log(
+          "================================="
+        );
+
+        try {
+
+          stopChatCollection(
+            watcher.req
+          );
+
+        } catch (error) {
+
+          console.error(
+            "방송 종료 처리 오류:",
+            error
+          );
+
+        }
+
+      }
+
+      watcher.isLive =
+        false;
+
+      watcher.liveId =
+        null;
+
+      watcher.liveInfo =
+        null;
+
     }
 
   } catch (error) {
 
+    /*
+     * =====================================
+     * API 오류
+     * =====================================
+     *
+     * 중요:
+     * API 오류가 발생했다고
+     * 방송 종료로 판단하지 않는다.
+     */
+
     console.error(
-      `[방송 상태 확인 오류] ${channelId}:`,
+      `[방송 감시 API 오류] ${channelId}:`,
       error.message
     );
 
-    /*
-     * API 오류가 발생했다고
-     * 방송 종료로 판단하지 않음
-     */
+    console.log(
+      "⚠️ 이번 확인은 실패했지만 감시는 계속합니다."
+    );
 
   } finally {
 
-    watcher.checking = false;
+    watcher.checking =
+      false;
 
     /*
-     * 이번 확인이 끝난 후
-     * 10초 뒤 다시 확인
+     * =====================================
+     * 다음 확인 예약
+     * =====================================
      */
 
     if (
@@ -200,7 +237,11 @@ async function checkLiveWatcher(channelId) {
     ) {
 
       if (watcher.timer) {
-        clearTimeout(watcher.timer);
+
+        clearTimeout(
+          watcher.timer
+        );
+
       }
 
       watcher.timer =
@@ -214,10 +255,16 @@ async function checkLiveWatcher(channelId) {
           },
           10000
         );
-    }
-  }
-}
 
+      console.log(
+        "⏱️ 다음 방송 상태 확인: 10초 후"
+      );
+
+    }
+
+  }
+
+}
 
 /* =========================================
    방송 감시 시작
@@ -324,26 +371,20 @@ function stopLiveWatcher(channelId) {
     return;
   }
 
-  /*
-   * 감시 중지 표시
-   */
-  watcher.stopped = true;
+  watcher.stopped =
+    true;
 
-  /*
-   * 예약된 다음 확인 취소
-   */
   if (watcher.timer) {
 
     clearTimeout(
       watcher.timer
     );
 
-    watcher.timer = null;
+    watcher.timer =
+      null;
+
   }
 
-  /*
-   * 감시자 삭제
-   */
   liveWatchers.delete(
     channelId
   );
@@ -352,4 +393,5 @@ function stopLiveWatcher(channelId) {
     "방송 감시 종료:",
     channelId
   );
+
 }
