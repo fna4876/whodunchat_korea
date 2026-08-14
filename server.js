@@ -2885,9 +2885,6 @@ ${chatText}
                   process.env.OPENAI_MODEL ||
                   "gpt-4o-mini",
 
-                temperature:
-                  0.8,
-
                 response_format: {
                   type:
                     "json_object"
