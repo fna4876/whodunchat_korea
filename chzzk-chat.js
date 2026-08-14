@@ -245,30 +245,7 @@ export class ChzzkChat {
           socket;
 
 
-        timer =
-          setTimeout(
-            () => {
-
-              if (finished) {
-                return;
-              }
-
-
-              try {
-                socket.disconnect();
-              } catch {}
-
-
-              finishReject(
-                new Error(
-                  "치지직 채팅 Socket 연결 시간이 초과되었습니다."
-                )
-              );
-
-            },
-            10000
-          );
-
+    
 
         /*
          * Socket 연결 성공
