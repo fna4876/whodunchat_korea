@@ -15,14 +15,20 @@
   content="7_mF9VZIoupEhA6QoQh9TB0AJQ28JcoTTtJZkw8LeuA"
 >
 
-<title>
-후던챗 | 치지직 채팅 추리
-</title>
+<title>후던챗 | 치지직 채팅 추리</title>
 
 <style>
 
+/* =========================================================
+   RESET
+========================================================= */
+
 *{
   box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
 }
 
 body{
@@ -50,6 +56,11 @@ button:disabled{
   display:none!important;
 }
 
+
+/* =========================================================
+   PAGE
+========================================================= */
+
 .page{
   min-height:100vh;
   background:
@@ -59,6 +70,7 @@ button:disabled{
       #080808 45%
     );
 }
+
 
 /* =========================================================
    HEADER
@@ -75,7 +87,7 @@ button:disabled{
   top:0;
   background:rgba(8,8,8,.92);
   backdrop-filter:blur(10px);
-  z-index:10;
+  z-index:100;
 }
 
 .logo{
@@ -107,6 +119,7 @@ button:disabled{
   border-radius:5px;
 }
 
+
 /* =========================================================
    CONTAINER
 ========================================================= */
@@ -119,6 +132,7 @@ button:disabled{
   margin:auto;
   padding:70px 0;
 }
+
 
 /* =========================================================
    HERO
@@ -177,6 +191,7 @@ button:disabled{
   background:#20ee80;
 }
 
+
 /* =========================================================
    CARD
 ========================================================= */
@@ -210,6 +225,7 @@ button:disabled{
   padding:20px;
 }
 
+
 /* =========================================================
    CHANNEL
 ========================================================= */
@@ -241,6 +257,7 @@ button:disabled{
   font-weight:900;
 }
 
+
 /* =========================================================
    SECTION
 ========================================================= */
@@ -256,6 +273,7 @@ button:disabled{
   font-weight:900;
   letter-spacing:2px;
 }
+
 
 /* =========================================================
    CASE SETTINGS
@@ -337,6 +355,7 @@ button:disabled{
   color:#62bc88;
 }
 
+
 /* =========================================================
    OLD MODES
 ========================================================= */
@@ -380,8 +399,9 @@ button:disabled{
   line-height:1.6;
 }
 
+
 /* =========================================================
-   LIVE
+   LIVE CHAT
 ========================================================= */
 
 .live-control{
@@ -436,8 +456,9 @@ button:disabled{
   color:#ccc;
 }
 
+
 /* =========================================================
-   GENERATE BUTTON
+   GENERATE
 ========================================================= */
 
 .generate-info{
@@ -468,155 +489,495 @@ button:disabled{
   color:#00d564;
 }
 
+
 /* =========================================================
-   GAME
+   GAME AREA
 ========================================================= */
 
 .game{
-  padding-top:35px;
+  padding-top:15px;
+  padding-bottom:70px;
 }
 
-.game-top{
+
+/* =========================================================
+   LIVE CASE HEADER
+========================================================= */
+
+.live-case-header{
+  position:relative;
+  border:1px solid #174f31;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(0,213,100,.13),
+      transparent 55%
+    ),
+    #0b0d0c;
+  border-radius:10px;
+  padding:28px;
+  margin-bottom:22px;
+  overflow:hidden;
+}
+
+.live-case-header::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:4px;
+  background:#00d564;
+  box-shadow:0 0 20px rgba(0,213,100,.6);
+}
+
+.live-case-top{
   display:flex;
-  justify-content:space-between;
   align-items:center;
-  margin-bottom:20px;
-  gap:10px;
+  justify-content:space-between;
+  gap:15px;
+  margin-bottom:22px;
 }
 
-.game-top-left{
-  display:flex;
-  gap:7px;
-  flex-wrap:wrap;
+.live-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:#ff6868;
+  border:1px solid #633030;
+  background:#211010;
+  padding:8px 12px;
+  border-radius:5px;
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:1.5px;
 }
 
-.tag{
-  display:inline-block;
-  border:1px solid #444;
-  padding:7px 10px;
-  border-radius:4px;
-  color:#aaa;
-  font-size:10px;
+.live-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#ff3d3d;
+  box-shadow:0 0 10px #ff3d3d;
+  animation:livePulse 1.2s infinite;
+}
+
+@keyframes livePulse{
+
+  0%,100%{
+    opacity:1;
+    transform:scale(1);
+  }
+
+  50%{
+    opacity:.45;
+    transform:scale(.75);
+  }
+
+}
+
+.case-number{
+  color:#555;
+  font-size:11px;
   font-weight:900;
-}
-
-.tag.green{
-  color:#70ffad;
-  border-color:#176b3d;
-  background:#0d2417;
+  letter-spacing:2px;
 }
 
 .game-title{
-  font-size:42px;
+  font-size:
+    clamp(
+      42px,
+      7vw,
+      76px
+    );
+  line-height:1;
   margin:0;
-  letter-spacing:-2px;
+  letter-spacing:-5px;
+  font-weight:950;
+}
+
+.game-title-highlight{
+  color:#00d564;
 }
 
 .brief{
-  color:#888;
-  font-size:13px;
-  line-height:1.8;
-  margin:12px 0 25px;
+  color:#999;
+  font-size:15px;
+  line-height:1.9;
+  margin:20px 0 0;
+  max-width:800px;
 }
 
+
 /* =========================================================
-   EVIDENCE
+   INVESTIGATION STATUS BAR
+========================================================= */
+
+.investigation-bar{
+  display:grid;
+  grid-template-columns:
+    repeat(4,1fr);
+  gap:8px;
+  margin-top:25px;
+}
+
+.investigation-item{
+  min-height:72px;
+  border:1px solid #292929;
+  background:#101010;
+  border-radius:6px;
+  padding:12px 14px;
+}
+
+.investigation-label{
+  color:#666;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1.5px;
+  margin-bottom:8px;
+}
+
+.investigation-value{
+  color:#eee;
+  font-size:14px;
+  font-weight:950;
+}
+
+.investigation-value.green{
+  color:#70ffad;
+}
+
+
+/* =========================================================
+   EVIDENCE HEADER
+========================================================= */
+
+.evidence-section{
+  margin-top:28px;
+}
+
+.evidence-section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  margin-bottom:12px;
+}
+
+.evidence-section-title{
+  font-size:18px;
+  font-weight:950;
+}
+
+.evidence-section-sub{
+  color:#666;
+  font-size:10px;
+}
+
+
+/* =========================================================
+   EVIDENCE CARDS
 ========================================================= */
 
 .evidence-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:10px;
+  gap:12px;
 }
 
 .evidence{
-  min-height:150px;
+  min-height:185px;
   border:1px solid #292929;
-  background:#101010;
-  padding:20px;
-  border-radius:6px;
+  background:
+    linear-gradient(
+      145deg,
+      #141414,
+      #0d0d0d
+    );
+  padding:24px;
+  border-radius:8px;
+  position:relative;
+  overflow:hidden;
+  transition:
+    border-color .2s,
+    transform .2s,
+    background .2s;
+}
+
+.evidence:hover{
+  border-color:#176b3d;
+  transform:translateY(-2px);
+  background:
+    linear-gradient(
+      145deg,
+      #151d18,
+      #0d0d0d
+    );
+}
+
+.evidence::after{
+  content:"";
+  position:absolute;
+  right:-30px;
+  bottom:-40px;
+  width:100px;
+  height:100px;
+  border-radius:50%;
+  background:rgba(0,213,100,.035);
 }
 
 .evidence-number{
   color:#00d564;
   font-size:10px;
-  font-weight:900;
+  font-weight:950;
   letter-spacing:2px;
+}
+
+.evidence-icon{
+  margin-top:13px;
+  color:#444;
+  font-size:24px;
 }
 
 .evidence-text{
-  margin-top:18px;
-  color:#ddd;
-  font-size:13px;
-  line-height:1.8;
+  margin-top:12px;
+  color:#e5e5e5;
+  font-size:14px;
+  line-height:1.85;
+  font-weight:600;
 }
 
+
 /* =========================================================
-   SUSPECTS
+   SUSPECT SECTION
 ========================================================= */
 
+.suspect-section{
+  margin-top:32px;
+}
+
+.suspect-section-head{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+
 .suspect-title{
-  margin:28px 0 12px;
-  font-size:12px;
-  color:#777;
-  letter-spacing:2px;
-  font-weight:900;
+  margin:0;
+  font-size:18px;
+  color:#eee;
+  letter-spacing:-.5px;
+  font-weight:950;
+}
+
+.suspect-help{
+  color:#666;
+  font-size:10px;
 }
 
 .suspects{
   display:grid;
   grid-template-columns:
     repeat(4,1fr);
-  gap:8px;
+  gap:10px;
 }
 
 .suspect{
+  min-height:110px;
   border:1px solid #333;
-  background:#111;
+  background:
+    linear-gradient(
+      145deg,
+      #151515,
+      #0e0e0e
+    );
   color:#eee;
-  padding:18px 10px;
-  border-radius:5px;
-  font-weight:900;
+  padding:20px 12px;
+  border-radius:7px;
+  font-weight:950;
   text-align:center;
+  font-size:15px;
+  transition:
+    .18s;
 }
 
 .suspect:hover{
-  border-color:#666;
+  border-color:#00d564;
+  background:#102117;
+  transform:translateY(-2px);
 }
 
 .suspect.correct{
-  background:#10351f;
+  background:
+    linear-gradient(
+      145deg,
+      #164d2d,
+      #0e2819
+    );
   border-color:#00d564;
   color:#70ffad;
+  box-shadow:
+    0 0 25px
+    rgba(0,213,100,.18);
 }
 
 .suspect.wrong{
-  background:#351414;
+  background:
+    linear-gradient(
+      145deg,
+      #4a1818,
+      #271010
+    );
   border-color:#ff5b5b;
   color:#ff9292;
 }
 
+
 /* =========================================================
-   RESULT
+   RESULT OVERLAY
 ========================================================= */
 
-.result{
-  margin-top:15px;
+.result-overlay{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   padding:20px;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(7px);
+}
+
+.result-modal{
+  width:min(
+    540px,
+    100%
+  );
+  border-radius:12px;
   border:1px solid #333;
   background:#101010;
-  border-radius:6px;
+  padding:38px 30px;
+  text-align:center;
+  box-shadow:
+    0 25px 80px
+    rgba(0,0,0,.8);
+  animation:resultIn .22s ease;
+}
+
+@keyframes resultIn{
+
+  from{
+    opacity:0;
+    transform:
+      translateY(15px)
+      scale(.97);
+  }
+
+  to{
+    opacity:1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+}
+
+.result-icon{
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 auto 18px;
+  font-size:35px;
+  font-weight:950;
+}
+
+.result-modal.success{
+  border-color:#00d564;
+  box-shadow:
+    0 0 60px
+    rgba(0,213,100,.15),
+    0 25px 80px
+    rgba(0,0,0,.8);
+}
+
+.result-modal.success
+.result-icon{
+  background:#10351f;
+  color:#70ffad;
+  border:1px solid #00d564;
+}
+
+.result-modal.fail{
+  border-color:#ff5b5b;
+  box-shadow:
+    0 0 60px
+    rgba(255,70,70,.12),
+    0 25px 80px
+    rgba(0,0,0,.8);
+}
+
+.result-modal.fail
+.result-icon{
+  background:#351414;
+  color:#ff9292;
+  border:1px solid #ff5b5b;
+}
+
+.result-kicker{
+  color:#777;
+  font-size:10px;
+  letter-spacing:3px;
+  font-weight:950;
+}
+
+.result-title{
+  margin:10px 0 12px;
+  font-size:34px;
+  letter-spacing:-2px;
+  font-weight:950;
+}
+
+.result-description{
+  color:#999;
   font-size:13px;
   line-height:1.8;
 }
 
-.result-success{
-  border-color:#00d564;
+.result-answer{
+  margin-top:18px;
+  padding:14px;
+  background:#0a0a0a;
+  border:1px solid #292929;
+  border-radius:6px;
+  color:#aaa;
+  font-size:12px;
 }
 
-.result-fail{
-  border-color:#ff5b5b;
+.result-answer strong{
+  color:#70ffad;
+  font-size:15px;
 }
+
+.result-close{
+  width:100%;
+  margin-top:22px;
+  border:0;
+  background:#00d564;
+  color:#06100a;
+  padding:15px;
+  border-radius:6px;
+  font-weight:950;
+  font-size:14px;
+}
+
+.result-close:hover{
+  background:#20ee80;
+}
+
 
 /* =========================================================
    BACK
@@ -624,13 +985,19 @@ button:disabled{
 
 .back{
   width:100%;
-  margin-top:12px;
+  margin-top:14px;
   padding:15px;
   background:#111;
   border:1px solid #333;
   color:#eee;
   border-radius:5px;
+  font-weight:800;
 }
+
+.back:hover{
+  border-color:#555;
+}
+
 
 /* =========================================================
    NOTICE
@@ -644,8 +1011,9 @@ button:disabled{
   margin-top:25px;
 }
 
+
 /* =========================================================
-   RESPONSIVE
+   RESPONSIVE 800
 ========================================================= */
 
 @media(max-width:800px){
@@ -664,7 +1032,17 @@ button:disabled{
     grid-template-columns:1fr;
   }
 
+  .investigation-bar{
+    grid-template-columns:
+      1fr 1fr;
+  }
+
 }
+
+
+/* =========================================================
+   RESPONSIVE 600
+========================================================= */
 
 @media(max-width:600px){
 
@@ -701,7 +1079,8 @@ button:disabled{
   }
 
   .game-title{
-    font-size:34px;
+    font-size:43px;
+    letter-spacing:-3px;
   }
 
   .setting-options,
@@ -712,6 +1091,59 @@ button:disabled{
   .game-top{
     align-items:flex-start;
     flex-direction:column;
+  }
+
+  .live-case-header{
+    padding:22px 18px;
+  }
+
+  .live-case-top{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .investigation-bar{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .evidence{
+    min-height:160px;
+    padding:20px;
+  }
+
+  .suspect{
+    min-height:90px;
+    font-size:14px;
+  }
+
+  .result-modal{
+    padding:30px 20px;
+  }
+
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media(max-width:380px){
+
+  .investigation-bar{
+    grid-template-columns:1fr;
+  }
+
+  .suspects{
+    grid-template-columns:1fr;
+  }
+
+  .setting-options,
+  .setting-options.types{
+    grid-template-columns:1fr;
+  }
+
+  .game-title{
+    font-size:38px;
   }
 
 }
@@ -725,6 +1157,10 @@ button:disabled{
 
 <div class="page">
 
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
 
 <header class="header">
 
@@ -758,427 +1194,58 @@ button:disabled{
 <main class="container">
 
 
+<!-- =====================================================
+     HOME
+===================================================== -->
+
 <section id="home">
 
 
-<div class="hero">
+  <!-- HERO -->
 
-  <div class="hero-small">
-    치지직 채팅 추리 게임
-  </div>
+  <div class="hero">
 
-
-  <h1>
-    범인은<br>
-    <span>누구인가?</span>
-  </h1>
-
-
-  <p>
-    방송 채팅 속에 숨겨진 단서를 찾아라.<br>
-    시청자들의 대화가 하나의 사건이 됩니다.
-  </p>
-
-
-  <button
-    id="heroStart"
-    class="main-button"
-  >
-    사건 수사 시작
-  </button>
-
-</div>
-
-
-<!-- =====================================================
-     채널
-===================================================== -->
-
-<div class="card">
-
-  <div class="card-head">
-
-    <div class="card-title">
-      수사 대상 채널
+    <div class="hero-small">
+      치지직 채팅 추리 게임
     </div>
 
-    <div class="card-sub">
-      치지직 연결
-    </div>
+
+    <h1>
+      범인은<br>
+      <span>누구인가?</span>
+    </h1>
+
+
+    <p>
+      방송 채팅 속에 숨겨진 단서를 찾아라.<br>
+      시청자들의 대화가 하나의 사건이 됩니다.
+    </p>
+
+
+    <button
+      id="heroStart"
+      class="main-button"
+    >
+      사건 수사 시작
+    </button>
 
   </div>
 
 
-  <div class="card-body">
-
-    <div class="channel">
-
-      <div>
-
-        <div
-          id="channelName"
-          class="channel-name"
-        >
-          치지직 채널을 연결해주세요
-        </div>
-
-
-        <div
-          id="channelInfo"
-          class="channel-info"
-        >
-          로그인하면 본인 방송의 실시간 채팅을 수집할 수 있습니다.
-        </div>
-
-      </div>
-
-
-      <button
-        id="login"
-        class="login-button"
-      >
-        치지직 로그인
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     사건 설정
-===================================================== -->
-
-<div class="section">
-
-  <div class="section-title">
-    사건 설정
-  </div>
-
-
-  <div class="case-settings">
-
-
-    <!-- 난이도 -->
-
-    <div class="setting-box">
-
-      <div class="setting-label">
-        난이도
-      </div>
-
-
-      <div class="setting-options">
-
-
-        <button
-          class="option active"
-          data-difficulty="easy"
-        >
-
-          <span class="option-title">
-            쉬움
-          </span>
-
-          <span class="option-description">
-            단서가 비교적 명확합니다
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-difficulty="normal"
-        >
-
-          <span class="option-title">
-            보통
-          </span>
-
-          <span class="option-description">
-            단서를 조합해야 합니다
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-difficulty="hard"
-        >
-
-          <span class="option-title">
-            어려움
-          </span>
-
-          <span class="option-description">
-            숨겨진 단서를 찾아야 합니다
-          </span>
-
-        </button>
-
-
-      </div>
-
-    </div>
-
-
-    <!-- 유형 -->
-
-    <div class="setting-box">
-
-      <div class="setting-label">
-        사건 유형
-      </div>
-
-
-      <div class="setting-options types">
-
-
-        <button
-          class="option active"
-          data-case-type="random"
-        >
-
-          <span class="option-title">
-            랜덤
-          </span>
-
-          <span class="option-description">
-            AI가 자유롭게 선택
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-case-type="theft"
-        >
-
-          <span class="option-title">
-            절도
-          </span>
-
-          <span class="option-description">
-            물건이 사라진 사건
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-case-type="missing"
-        >
-
-          <span class="option-title">
-            실종
-          </span>
-
-          <span class="option-description">
-            누군가 사라진 사건
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-case-type="betrayal"
-        >
-
-          <span class="option-title">
-            배신
-          </span>
-
-          <span class="option-description">
-            숨겨진 관계와 거짓말
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-case-type="secret"
-        >
-
-          <span class="option-title">
-            비밀
-          </span>
-
-          <span class="option-description">
-            숨겨진 진실을 추적
-          </span>
-
-        </button>
-
-
-        <button
-          class="option"
-          data-case-type="mystery"
-        >
-
-          <span class="option-title">
-            미스터리
-          </span>
-
-          <span class="option-description">
-            복잡한 단서를 추리
-          </span>
-
-        </button>
-
-
-      </div>
-
-    </div>
-
-
-  </div>
-
-
-  <div
-    id="selectedSummary"
-    class="selected-summary"
-  >
-
-    <div class="selected-tag">
-      난이도:
-      <span id="selectedDifficulty">
-        쉬움
-      </span>
-    </div>
-
-
-    <div class="selected-tag">
-      유형:
-      <span id="selectedType">
-        랜덤
-      </span>
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     사건 모드
-===================================================== -->
-
-<div class="section">
-
-  <div class="section-title">
-    게임 모드
-  </div>
-
-
-  <div class="modes">
-
-
-    <div class="mode active">
-
-      <div class="mode-number">
-        01
-      </div>
-
-      <h3>
-        오늘의 사건
-      </h3>
-
-      <p>
-        채팅에서 하나의 사건을 발견합니다.
-      </p>
-
-    </div>
-
-
-    <div class="mode">
-
-      <div class="mode-number">
-        02
-      </div>
-
-      <h3>
-        미제 사건
-      </h3>
-
-      <p>
-        여러 단서를 모아 사건을 해결합니다.
-      </p>
-
-    </div>
-
-
-    <div class="mode">
-
-      <div class="mode-number">
-        03
-      </div>
-
-      <h3>
-        장기 수사
-      </h3>
-
-      <p>
-        제한 없이 천천히 추리합니다.
-      </p>
-
-    </div>
-
-
-    <div class="mode">
-
-      <div class="mode-number">
-        04
-      </div>
-
-      <h3>
-        야간 수사
-      </h3>
-
-      <p>
-        끝없이 이어지는 채팅 추리입니다.
-      </p>
-
-    </div>
-
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     실시간 채팅
-===================================================== -->
-
-<div class="section">
-
-  <div class="section-title">
-    실시간 채팅
-  </div>
-
+  <!-- ===================================================
+       CHANNEL
+  =================================================== -->
 
   <div class="card">
 
     <div class="card-head">
 
       <div class="card-title">
-        방송 채팅 기록
+        수사 대상 채널
       </div>
 
-
-      <div
-        id="chatCount"
-        class="card-sub"
-      >
-        채팅 0개
+      <div class="card-sub">
+        치지직 연결
       </div>
 
     </div>
@@ -1186,47 +1253,424 @@ button:disabled{
 
     <div class="card-body">
 
-      <div class="live-control">
+      <div class="channel">
+
+        <div>
+
+          <div
+            id="channelName"
+            class="channel-name"
+          >
+            치지직 채널을 연결해주세요
+          </div>
+
+
+          <div
+            id="channelInfo"
+            class="channel-info"
+          >
+            로그인하면 본인 방송의 실시간 채팅을 수집할 수 있습니다.
+          </div>
+
+        </div>
+
 
         <button
-          id="start"
-          class="live-button start"
+          id="login"
+          class="login-button"
         >
-          채팅 수집 시작
-        </button>
-
-
-        <button
-          id="stop"
-          class="live-button"
-        >
-          수집 중지
+          치지직 로그인
         </button>
 
       </div>
 
+    </div>
 
-      <div
-        id="liveStatus"
-        class="chat-status"
-      >
-        로그인 후 방송이 켜져 있으면
-        실시간 채팅을 자동으로 수집합니다.
+  </div>
+
+
+  <!-- ===================================================
+       CASE SETTINGS
+  =================================================== -->
+
+  <div class="section">
+
+    <div class="section-title">
+      사건 설정
+    </div>
+
+
+    <div class="case-settings">
+
+
+      <!-- DIFFICULTY -->
+
+      <div class="setting-box">
+
+        <div class="setting-label">
+          난이도
+        </div>
+
+
+        <div class="setting-options">
+
+
+          <button
+            class="option active"
+            data-difficulty="easy"
+          >
+
+            <span class="option-title">
+              쉬움
+            </span>
+
+            <span class="option-description">
+              단서가 비교적 명확합니다
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-difficulty="normal"
+          >
+
+            <span class="option-title">
+              보통
+            </span>
+
+            <span class="option-description">
+              단서를 조합해야 합니다
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-difficulty="hard"
+          >
+
+            <span class="option-title">
+              어려움
+            </span>
+
+            <span class="option-description">
+              숨겨진 단서를 찾아야 합니다
+            </span>
+
+          </button>
+
+
+        </div>
+
       </div>
 
 
-      <div
-        id="chatlog"
-        class="chatlog"
-      >
+      <!-- CASE TYPE -->
+
+      <div class="setting-box">
+
+        <div class="setting-label">
+          사건 유형
+        </div>
+
+
+        <div class="setting-options types">
+
+
+          <button
+            class="option active"
+            data-case-type="random"
+          >
+
+            <span class="option-title">
+              랜덤
+            </span>
+
+            <span class="option-description">
+              AI가 자유롭게 선택
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-case-type="theft"
+          >
+
+            <span class="option-title">
+              절도
+            </span>
+
+            <span class="option-description">
+              물건이 사라진 사건
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-case-type="missing"
+          >
+
+            <span class="option-title">
+              실종
+            </span>
+
+            <span class="option-description">
+              누군가 사라진 사건
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-case-type="betrayal"
+          >
+
+            <span class="option-title">
+              배신
+            </span>
+
+            <span class="option-description">
+              숨겨진 관계와 거짓말
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-case-type="secret"
+          >
+
+            <span class="option-title">
+              비밀
+            </span>
+
+            <span class="option-description">
+              숨겨진 진실을 추적
+            </span>
+
+          </button>
+
+
+          <button
+            class="option"
+            data-case-type="mystery"
+          >
+
+            <span class="option-title">
+              미스터리
+            </span>
+
+            <span class="option-description">
+              복잡한 단서를 추리
+            </span>
+
+          </button>
+
+
+        </div>
+
+      </div>
+
+
+    </div>
+
+
+    <div
+      id="selectedSummary"
+      class="selected-summary"
+    >
+
+      <div class="selected-tag">
+        난이도:
+        <span id="selectedDifficulty">
+          쉬움
+        </span>
+      </div>
+
+
+      <div class="selected-tag">
+        유형:
+        <span id="selectedType">
+          랜덤
+        </span>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       MODES
+  =================================================== -->
+
+  <div class="section">
+
+    <div class="section-title">
+      게임 모드
+    </div>
+
+
+    <div class="modes">
+
+
+      <div class="mode active">
+
+        <div class="mode-number">
+          01
+        </div>
+
+        <h3>
+          오늘의 사건
+        </h3>
+
+        <p>
+          채팅에서 하나의 사건을 발견합니다.
+        </p>
+
+      </div>
+
+
+      <div class="mode">
+
+        <div class="mode-number">
+          02
+        </div>
+
+        <h3>
+          미제 사건
+        </h3>
+
+        <p>
+          여러 단서를 모아 사건을 해결합니다.
+        </p>
+
+      </div>
+
+
+      <div class="mode">
+
+        <div class="mode-number">
+          03
+        </div>
+
+        <h3>
+          장기 수사
+        </h3>
+
+        <p>
+          제한 없이 천천히 추리합니다.
+        </p>
+
+      </div>
+
+
+      <div class="mode">
+
+        <div class="mode-number">
+          04
+        </div>
+
+        <h3>
+          야간 수사
+        </h3>
+
+        <p>
+          끝없이 이어지는 채팅 추리입니다.
+        </p>
+
+      </div>
+
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       LIVE CHAT
+  =================================================== -->
+
+  <div class="section">
+
+    <div class="section-title">
+      실시간 채팅
+    </div>
+
+
+    <div class="card">
+
+      <div class="card-head">
+
+        <div class="card-title">
+          방송 채팅 기록
+        </div>
+
 
         <div
-          style="
-            color:#555;
-            font-size:12px;
-          "
+          id="chatCount"
+          class="card-sub"
         >
-          아직 수집된 채팅이 없습니다.
+          채팅 0개
+        </div>
+
+      </div>
+
+
+      <div class="card-body">
+
+        <div class="live-control">
+
+          <button
+            id="start"
+            class="live-button start"
+          >
+            채팅 수집 시작
+          </button>
+
+
+          <button
+            id="stop"
+            class="live-button"
+          >
+            수집 중지
+          </button>
+
+        </div>
+
+
+        <div
+          id="liveStatus"
+          class="chat-status"
+        >
+          로그인 후 방송이 켜져 있으면
+          실시간 채팅을 자동으로 수집합니다.
+        </div>
+
+
+        <div
+          id="chatlog"
+          class="chatlog"
+        >
+
+          <div
+            style="
+              color:#555;
+              font-size:12px;
+            "
+          >
+            아직 수집된 채팅이 없습니다.
+          </div>
+
         </div>
 
       </div>
@@ -1235,38 +1679,36 @@ button:disabled{
 
   </div>
 
-</div>
+
+  <button
+    id="history"
+    class="back"
+  >
+    저장된 채팅 내역 불러오기
+  </button>
 
 
-<button
-  id="history"
-  class="back"
->
-  저장된 채팅 내역 불러오기
-</button>
+  <button
+    id="open"
+    class="main-button"
+    style="width:100%;"
+  >
+    채팅으로 사건 만들기
+  </button>
 
 
-<button
-  id="open"
-  class="main-button"
-  style="width:100%;"
->
-  채팅으로 사건 만들기
-</button>
+  <div class="generate-info">
+    선택한 난이도와 사건 유형을 바탕으로 AI가 채팅에서 단서를 찾아
+    새로운 추리 사건을 생성합니다.
+  </div>
 
 
-<div class="generate-info">
-  선택한 난이도와 사건 유형을 바탕으로 AI가 채팅에서 단서를 찾아
-  새로운 추리 사건을 생성합니다.
-</div>
+  <div class="notice">
 
+    후던챗의 사건은 실제 인물을 범죄자로 지목하지 않는<br>
+    허구의 추리 게임 콘텐츠입니다.
 
-<div class="notice">
-
-  후던챗의 사건은 실제 인물을 범죄자로 지목하지 않는<br>
-  허구의 추리 게임 콘텐츠입니다.
-
-</div>
+  </div>
 
 
 </section>
@@ -1282,86 +1724,244 @@ button:disabled{
 >
 
 
-  <div class="game-top">
+  <!-- ===================================================
+       LIVE CASE HEADER
+  =================================================== -->
+
+  <div class="live-case-header">
 
 
-    <div class="game-top-left">
+    <div class="live-case-top">
 
-      <span class="tag">
-        최고 수배 사건
-      </span>
+      <div class="live-badge">
 
+        <span class="live-dot"></span>
 
-      <span
-        id="gameDifficulty"
-        class="tag green"
-      >
-        쉬움
-      </span>
+        LIVE 수사 사건
+
+      </div>
 
 
-      <span
-        id="gameType"
-        class="tag"
-      >
-        랜덤
-      </span>
+      <div class="case-number">
+        CASE // LIVE INVESTIGATION
+      </div>
 
     </div>
 
 
-    <span
-      id="count"
-      class="tag"
+    <h1 class="game-title">
+      범인은
+      <span class="game-title-highlight">
+        누구인가?
+      </span>
+    </h1>
+
+
+    <p
+      id="brief"
+      class="brief"
     >
-      용의자 0명
-    </span>
+      사건을 분석하고 있습니다.
+    </p>
+
+
+    <!-- =================================================
+         INVESTIGATION STATUS
+    ================================================= -->
+
+    <div class="investigation-bar">
+
+
+      <div class="investigation-item">
+
+        <div class="investigation-label">
+          난이도
+        </div>
+
+        <div
+          id="gameDifficulty"
+          class="investigation-value green"
+        >
+          쉬움
+        </div>
+
+      </div>
+
+
+      <div class="investigation-item">
+
+        <div class="investigation-label">
+          사건 유형
+        </div>
+
+        <div
+          id="gameType"
+          class="investigation-value"
+        >
+          랜덤
+        </div>
+
+      </div>
+
+
+      <div class="investigation-item">
+
+        <div class="investigation-label">
+          용의자
+        </div>
+
+        <div
+          id="count"
+          class="investigation-value"
+        >
+          용의자 0명
+        </div>
+
+      </div>
+
+
+      <div class="investigation-item">
+
+        <div class="investigation-label">
+          수사 상태
+        </div>
+
+        <div
+          class="investigation-value green"
+        >
+          수사 진행 중
+        </div>
+
+      </div>
+
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       EVIDENCE
+  =================================================== -->
+
+  <div class="evidence-section">
+
+
+    <div class="evidence-section-head">
+
+      <div class="evidence-section-title">
+        🧩 확보된 증거
+      </div>
+
+      <div class="evidence-section-sub">
+        CHAT EVIDENCE
+      </div>
+
+    </div>
+
+
+    <div
+      id="exhibits"
+      class="evidence-grid"
+    >
+    </div>
 
 
   </div>
 
 
-  <h1 class="game-title">
-    범인은 누구인가?
-  </h1>
+  <!-- ===================================================
+       SUSPECTS
+  =================================================== -->
+
+  <div class="suspect-section">
 
 
-  <p
-    id="brief"
-    class="brief"
-  >
-    사건을 분석하고 있습니다.
-  </p>
+    <div class="suspect-section-head">
+
+      <div class="suspect-title">
+        👤 용의자를 선택하세요
+      </div>
+
+      <div class="suspect-help">
+        증거를 분석하여 범인을 지목하세요
+      </div>
+
+    </div>
 
 
-  <div class="section-title">
-    확보된 증거
+    <div
+      id="choices"
+      class="suspects"
+    >
+    </div>
+
+
   </div>
 
+
+  <!-- ===================================================
+       RESULT OVERLAY
+  =================================================== -->
 
   <div
-    id="exhibits"
-    class="evidence-grid"
+    id="resultOverlay"
+    class="result-overlay hidden"
   >
-  </div>
+
+    <div
+      id="resultModal"
+      class="result-modal"
+    >
+
+      <div
+        id="resultIcon"
+        class="result-icon"
+      >
+        ✓
+      </div>
 
 
-  <div class="suspect-title">
-    용의자 선택
-  </div>
+      <div
+        id="resultKicker"
+        class="result-kicker"
+      >
+        INVESTIGATION COMPLETE
+      </div>
 
 
-  <div
-    id="choices"
-    class="suspects"
-  >
-  </div>
+      <div
+        id="resultTitle"
+        class="result-title"
+      >
+        사건 해결!
+      </div>
 
 
-  <div
-    id="result"
-    class="result hidden"
-  >
+      <div
+        id="resultDescription"
+        class="result-description"
+      >
+        정확하게 범인을 찾아냈습니다.
+      </div>
+
+
+      <div
+        id="resultAnswer"
+        class="result-answer"
+      >
+      </div>
+
+
+      <button
+        id="resultClose"
+        class="result-close"
+      >
+        사건 화면으로 돌아가기
+      </button>
+
+    </div>
+
   </div>
 
 
@@ -1547,7 +2147,7 @@ document
 
 
 /* =========================================================
-   로그인 버튼
+   로그인
 ========================================================= */
 
 document
@@ -2352,11 +2952,6 @@ async () => {
       "사건을 분석하고 있습니다...";
 
 
-    /*
-      중요:
-      여기서 난이도와 사건 유형을 서버로 함께 보낸다.
-    */
-
     const response =
       await fetch(
         "/api/case",
@@ -2405,11 +3000,6 @@ async () => {
 
     }
 
-
-    /*
-      서버에서 반환하지 않는 경우를 대비해서
-      현재 선택값도 화면에 표시한다.
-    */
 
     data.difficulty =
       data.difficulty ||
@@ -2540,6 +3130,10 @@ function renderCase(
       "증거를 확인하고 범인을 찾아보세요.";
 
 
+  /* =====================================================
+     증거 렌더링
+  ===================================================== */
+
   document
     .getElementById(
       "exhibits"
@@ -2565,6 +3159,10 @@ function renderCase(
                 )}
               </div>
 
+              <div class="evidence-icon">
+                🧩
+              </div>
+
               <div class="evidence-text">
                 ${escapeHtml(
                   item.text
@@ -2577,6 +3175,10 @@ function renderCase(
         )
         .join("");
 
+
+  /* =====================================================
+     용의자 렌더링
+  ===================================================== */
 
   document
     .getElementById(
@@ -2594,6 +3196,7 @@ function renderCase(
                 name
               )}"
             >
+              👤
               ${escapeHtml(
                 name
               )}
@@ -2603,6 +3206,10 @@ function renderCase(
         )
         .join("");
 
+
+  /* =====================================================
+     용의자 선택
+  ===================================================== */
 
   document
     .querySelectorAll(
@@ -2630,25 +3237,11 @@ function renderCase(
               .forEach(
                 item => {
 
-                  item.classList.remove(
-                    "correct",
-                    "wrong"
-                  );
+                  item.disabled =
+                    true;
 
                 }
               );
-
-
-            const result =
-              document
-                .getElementById(
-                  "result"
-                );
-
-
-            result.classList.remove(
-              "hidden"
-            );
 
 
             if (correct) {
@@ -2658,17 +3251,10 @@ function renderCase(
               );
 
 
-              result.className =
-                "result result-success";
-
-
-              result.innerHTML = `
-                <strong>
-                  사건 해결!
-                </strong>
-                <br>
-                정확하게 범인을 찾아냈습니다.
-              `;
+              showResult(
+                true,
+                data.suspect
+              );
 
             } else {
 
@@ -2677,25 +3263,10 @@ function renderCase(
               );
 
 
-              result.className =
-                "result result-fail";
-
-
-              result.innerHTML = `
-                <strong>
-                  잘못된 용의자입니다.
-                </strong>
-                <br>
-                증거를 다시 살펴보세요.
-                <br><br>
-                정답은
-                <strong>
-                  ${escapeHtml(
-                    data.suspect
-                  )}
-                </strong>
-                입니다.
-              `;
+              showResult(
+                false,
+                data.suspect
+              );
 
             }
 
@@ -2705,6 +3276,189 @@ function renderCase(
     );
 
 }
+
+
+/* =========================================================
+   결과 표시
+========================================================= */
+
+function showResult(
+  success,
+  answer
+){
+
+  const overlay =
+    document.getElementById(
+      "resultOverlay"
+    );
+
+
+  const modal =
+    document.getElementById(
+      "resultModal"
+    );
+
+
+  const icon =
+    document.getElementById(
+      "resultIcon"
+    );
+
+
+  const kicker =
+    document.getElementById(
+      "resultKicker"
+    );
+
+
+  const title =
+    document.getElementById(
+      "resultTitle"
+    );
+
+
+  const description =
+    document.getElementById(
+      "resultDescription"
+    );
+
+
+  const answerBox =
+    document.getElementById(
+      "resultAnswer"
+    );
+
+
+  modal.className =
+    success
+      ? "result-modal success"
+      : "result-modal fail";
+
+
+  if (success) {
+
+    icon.textContent =
+      "✓";
+
+    kicker.textContent =
+      "INVESTIGATION COMPLETE";
+
+    title.textContent =
+      "사건 해결!";
+
+    description.textContent =
+      "정확하게 범인을 찾아냈습니다.";
+
+    answerBox.innerHTML = `
+      범인은
+      <strong>
+        ${escapeHtml(answer)}
+      </strong>
+      입니다.
+    `;
+
+  } else {
+
+    icon.textContent =
+      "×";
+
+    kicker.textContent =
+      "INVESTIGATION FAILED";
+
+    title.textContent =
+      "수사 실패";
+
+    description.textContent =
+      "선택한 용의자가 범인이 아닙니다. 증거를 다시 살펴보세요.";
+
+    answerBox.innerHTML = `
+      진짜 범인은
+      <strong>
+        ${escapeHtml(answer)}
+      </strong>
+      입니다.
+    `;
+
+  }
+
+
+  overlay.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+/* =========================================================
+   결과 닫기
+========================================================= */
+
+document
+  .getElementById(
+    "resultClose"
+  )
+  .onclick =
+  () => {
+
+    document
+      .getElementById(
+        "resultOverlay"
+      )
+      .classList
+      .add("hidden");
+
+  };
+
+
+/* =========================================================
+   결과 오버레이 바깥 클릭
+========================================================= */
+
+document
+  .getElementById(
+    "resultOverlay"
+  )
+  .onclick =
+  event => {
+
+    if (
+      event.target.id ===
+      "resultOverlay"
+    ) {
+
+      event.currentTarget
+        .classList
+        .add("hidden");
+
+    }
+
+  };
+
+
+/* =========================================================
+   ESC로 결과 닫기
+========================================================= */
+
+document.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key ===
+      "Escape"
+    ) {
+
+      document
+        .getElementById(
+          "resultOverlay"
+        )
+        .classList
+        .add("hidden");
+
+    }
+
+  }
+);
 
 
 /* =========================================================
@@ -2736,7 +3490,7 @@ document
 
     document
       .getElementById(
-        "result"
+        "resultOverlay"
       )
       .classList
       .add("hidden");
@@ -2755,7 +3509,7 @@ document
 
 
 /* =========================================================
-   HTML escape
+   HTML ESCAPE
 ========================================================= */
 
 function escapeHtml(

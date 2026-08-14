@@ -910,49 +910,102 @@ async function startChatCollection(
       channelId,
 
       onChat:
-        message => {
+  message => {
 
-          const connection =
-            chatConnections.get(
-              channelId
-            );
+    const connection =
+      chatConnections.get(
+        channelId
+      );
+
+    if (
+      connection
+    ) {
+
+      const messageId =
+        message?.id;
+
+      // 같은 메시지 ID가 이미 들어온 경우 무시
+      if (
+        messageId &&
+        connection.messages.some(
+          item =>
+            item?.id === messageId
+        )
+      ) {
+
+        console.log(
+          `♻️ 중복 채팅 무시: ${messageId}`
+        );
+
+        return;
+
+      }
 
 
-          if (
-            connection
-          ) {
+      // ID가 없는 메시지를 위한 추가 중복 방지
+      if (!messageId) {
 
-            connection.messages.push(
-              message
-            );
+        const lastMessage =
+          connection.messages[
+            connection.messages.length - 1
+          ];
 
-
-            if (
-              connection.messages.length >
-              1000
-            ) {
-
-              connection.messages =
-                connection.messages.slice(
-                  -1000
-                );
-
-            }
-
-          }
-
-
-          saveChatMessage(
-            channelId,
-            message
-          );
-
+        if (
+          lastMessage &&
+          lastMessage.nickname ===
+            message?.nickname &&
+          lastMessage.content ===
+            message?.content &&
+          Math.abs(
+            Number(lastMessage.timestamp || 0) -
+            Number(message?.timestamp || 0)
+          ) < 3000
+        ) {
 
           console.log(
-            `💬 [${channelId}] ${message.nickname}: ${message.content}`
+            "♻️ 중복 채팅 무시:",
+            message?.nickname,
+            message?.content
           );
 
-        },
+          return;
+
+        }
+
+      }
+
+
+      connection.messages.push(
+        message
+      );
+
+
+      if (
+        connection.messages.length >
+        1000
+      ) {
+
+        connection.messages =
+          connection.messages.slice(
+            -1000
+          );
+
+      }
+
+    }
+
+
+    saveChatMessage(
+      channelId,
+      message
+    );
+
+
+    console.log(
+      `💬 [${channelId}] ${message.nickname}: ${message.content}`
+    );
+
+  },
 
       onStatus:
         message => {

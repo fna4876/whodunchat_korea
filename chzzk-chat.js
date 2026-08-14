@@ -46,6 +46,19 @@ export class ChzzkChat {
     this.reconnectDelay =
       3000;
 
+
+    /*
+     * =====================================================
+     * 중복 채팅 방지
+     * =====================================================
+     *
+     * 같은 CHAT 이벤트가 여러 번 들어와도
+     * 동일한 message.id는 한 번만 처리한다.
+     */
+
+    this.recentMessageIds =
+      new Set();
+
   }
 
 
@@ -109,13 +122,6 @@ export class ChzzkChat {
       );
 
 
-      /*
-       * 중요
-       *
-       * Socket 재연결 때마다
-       * 새로운 세션 URL을 발급받는다.
-       */
-
       const response =
         await fetch(
           `${CHZZK_API}/open/v1/sessions/auth`,
@@ -172,10 +178,6 @@ export class ChzzkChat {
 
       }
 
-
-      /*
-       * CHZZK 응답 형태 대응
-       */
 
       const sessionUrl =
         data?.content?.url ||
@@ -461,10 +463,6 @@ export class ChzzkChat {
 
               try {
 
-                /*
-                 * CHAT 구독 요청
-                 */
-
                 await this.subscribeChat();
 
 
@@ -632,7 +630,6 @@ export class ChzzkChat {
 
             const nickname =
               data?.profile?.nickname ||
-              data?.profile?.nickname ||
               data?.sender?.nickname ||
               "알 수 없음";
 
@@ -642,39 +639,110 @@ export class ChzzkChat {
               "";
 
 
+            /*
+             * =================================================
+             * 메시지 ID 생성
+             * =================================================
+             */
+
+            const messageId =
+              [
+                channelId,
+
+                data.senderChannelId ||
+                  "",
+
+                messageTime,
+
+                content
+              ].join("-");
+
+
             const message = {
 
               id:
-                [
-                  channelId,
-
-                  data.senderChannelId ||
-                    "",
-
-                  messageTime,
-
-                  content
-                ].join("-"),
-
+                messageId,
 
               channelId,
 
-
               nickname,
-
 
               content,
 
-
               timestamp:
                 messageTime,
-
 
               senderChannelId:
                 data.senderChannelId ||
                 null
 
             };
+
+
+            /*
+             * =================================================
+             * ★ 중복 CHAT 이벤트 차단
+             * =================================================
+             *
+             * 같은 채팅이 두 번 들어오면
+             * 동일한 message.id가 만들어진다.
+             *
+             * 이미 처리한 ID라면 여기서 끝낸다.
+             */
+
+            if (
+              this.recentMessageIds.has(
+                messageId
+              )
+            ) {
+
+              console.log(
+                "♻️ 중복 CHAT 이벤트 무시:",
+                messageId
+              );
+
+              return;
+
+            }
+
+
+            /*
+             * 처음 들어온 메시지는 저장
+             */
+
+            this.recentMessageIds.add(
+              messageId
+            );
+
+
+            /*
+             * Set이 무한히 커지지 않도록
+             * 최대 5000개까지만 유지
+             */
+
+            if (
+              this.recentMessageIds.size >
+              5000
+            ) {
+
+              const oldestId =
+                this.recentMessageIds
+                  .values()
+                  .next()
+                  .value;
+
+
+              if (
+                oldestId
+              ) {
+
+                this.recentMessageIds.delete(
+                  oldestId
+                );
+
+              }
+
+            }
 
 
             /*
@@ -744,13 +812,6 @@ export class ChzzkChat {
 
             }
 
-
-            /*
-             * connect 이후 종료되었다면
-             * connect() Promise를 실패시키지 않는다.
-             *
-             * 자동 재연결을 사용한다.
-             */
 
             if (
               !finished &&
@@ -841,10 +902,6 @@ export class ChzzkChat {
           sessionUrl
         );
 
-
-        /*
-         * 연결 시작
-         */
 
         socket.connect();
 
@@ -1018,10 +1075,6 @@ export class ChzzkChat {
 
           try {
 
-            /*
-             * 이전 sessionKey 제거
-             */
-
             this.sessionKey =
               null;
 
@@ -1029,10 +1082,6 @@ export class ChzzkChat {
             this.subscribed =
               false;
 
-
-            /*
-             * 새로운 세션 발급
-             */
 
             await this.createSessionAndConnect();
 
@@ -1070,55 +1119,57 @@ export class ChzzkChat {
 
   normalizeData(raw) {
 
-  let data = raw;
+    let data =
+      raw;
 
 
-  /*
-   * Socket.IO에서 배열로 들어오는 경우
-   */
-  if (
-    Array.isArray(data)
-  ) {
+    /*
+     * Socket.IO에서 배열로 들어오는 경우
+     */
 
-    data =
-      data[0] ||
-      null;
-
-  }
-
-
-  /*
-   * CHZZK SYSTEM / CHAT이
-   * JSON 문자열로 들어오는 경우
-   */
-  if (
-    typeof data ===
-    "string"
-  ) {
-
-    try {
+    if (
+      Array.isArray(data)
+    ) {
 
       data =
-        JSON.parse(
-          data
-        );
-
-    } catch (error) {
-
-      console.error(
-        "❌ CHZZK JSON 파싱 실패:",
-        data
-      );
-
-      return null;
+        data[0] ||
+        null;
 
     }
 
-  }
+
+    /*
+     * JSON 문자열로 들어오는 경우
+     */
+
+    if (
+      typeof data ===
+      "string"
+    ) {
+
+      try {
+
+        data =
+          JSON.parse(
+            data
+          );
+
+        } catch (error) {
+
+          console.error(
+            "❌ CHZZK JSON 파싱 실패:",
+            data
+          );
+
+          return null;
+
+        }
+
+    }
 
 
-  return data ||
-    null;
+    return data ||
+      null;
 
   }
 
