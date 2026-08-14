@@ -3476,6 +3476,27 @@ async function testDatabase() {
   }
 }
 
+async function initDatabase() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chzzk_accounts (
+        channel_id TEXT PRIMARY KEY,
+        user_data JSONB,
+        access_token TEXT,
+        refresh_token TEXT,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    console.log("✅ PostgreSQL 테이블 준비 완료");
+  } catch (error) {
+    console.error(
+      "❌ PostgreSQL 테이블 생성 실패:",
+      error.message
+    );
+  }
+}
+
 app.listen(
   PORT,
   "0.0.0.0",
@@ -3484,7 +3505,8 @@ app.listen(
     console.log("");
 
     testDatabase();
-
+    initDatabase();
+    
     console.log(
       "================================="
     );
