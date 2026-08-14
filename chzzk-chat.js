@@ -48,21 +48,24 @@ export class ChzzkChat {
       );
     }
 
-
     if (!this.channelId) {
       throw new Error(
         "Channel ID가 없습니다."
       );
     }
 
-
     this.closed = false;
-
 
     this.onStatus(
       "치지직 채팅 세션 요청 중..."
     );
 
+
+    /*
+     * 유저 인증 세션 생성
+     *
+     * GET /open/v1/sessions/auth
+     */
 
     const response =
       await fetch(
@@ -85,17 +88,20 @@ export class ChzzkChat {
       await response.text();
 
 
-    let data;
+    let data = null;
+
 
     try {
 
       data =
-        JSON.parse(text);
+        text
+          ? JSON.parse(text)
+          : null;
 
     } catch {
 
       throw new Error(
-        `세션 응답 파싱 실패: ${text}`
+        `치지직 세션 응답이 올바른 JSON이 아닙니다: ${text}`
       );
 
     }
@@ -106,7 +112,7 @@ export class ChzzkChat {
       throw new Error(
         data?.message ||
         data?.error ||
-        `세션 요청 실패: HTTP ${response.status}`
+        `치지직 세션 요청 실패: HTTP ${response.status}`
       );
 
     }
@@ -114,12 +120,16 @@ export class ChzzkChat {
 
     const sessionUrl =
       data?.content?.url ||
-      data?.data?.url ||
       data?.url ||
       null;
 
 
     if (!sessionUrl) {
+
+      console.error(
+        "세션 응답:",
+        data
+      );
 
       throw new Error(
         "치지직 Socket 세션 URL을 받지 못했습니다."
@@ -133,7 +143,7 @@ export class ChzzkChat {
     );
 
     console.log(
-      "🔗 CHZZK Session URL"
+      "🔗 치지직 Socket 세션 URL"
     );
 
     console.log(
@@ -208,23 +218,25 @@ export class ChzzkChat {
 
 
         /*
-         * 중요
+         * 치지직 공식 Socket.IO 설정에 맞춤
          *
-         * transports를 websocket으로 강제하지 않는다.
-         *
-         * Socket.IO 2.x가
-         * 서버와 맞는 transport를 선택하게 한다.
+         * socket.io-client 2.0.3
          */
 
         const socket =
-          io(
+          io.connect(
             sessionUrl,
             {
               reconnection: false,
 
-              forceNew: true,
+              "force new connection":
+                true,
 
-              timeout: 15000
+              "connect timeout":
+                3000,
+
+              transports:
+                ["websocket"]
             }
           );
 
@@ -254,12 +266,12 @@ export class ChzzkChat {
               );
 
             },
-            20000
+            10000
           );
 
 
         /*
-         * 연결 성공
+         * Socket 연결 성공
          */
 
         socket.on(
@@ -271,18 +283,25 @@ export class ChzzkChat {
 
 
             console.log(
-              "✅ 치지직 Socket 연결 성공"
+              "================================="
             );
 
+            console.log(
+              "✅ 치지직 Socket 연결 성공"
+            );
 
             console.log(
               "Socket ID:",
               socket.id
             );
 
+            console.log(
+              "================================="
+            );
+
 
             this.onStatus(
-              "Socket 연결 완료"
+              "치지직 Socket 연결 완료"
             );
 
           }
@@ -291,6 +310,10 @@ export class ChzzkChat {
 
         /*
          * SYSTEM
+         *
+         * connected
+         * subscribed
+         * revoked
          */
 
         socket.on(
@@ -319,7 +342,7 @@ export class ChzzkChat {
 
 
             /*
-             * connected
+             * Socket 연결 완료
              */
 
             if (
@@ -327,16 +350,16 @@ export class ChzzkChat {
               "connected"
             ) {
 
-              this.sessionKey =
+              const sessionKey =
                 data?.data?.sessionKey ||
                 null;
 
 
-              if (!this.sessionKey) {
+              if (!sessionKey) {
 
                 finishReject(
                   new Error(
-                    "Socket 연결은 되었지만 sessionKey를 받지 못했습니다."
+                    "치지직 Socket 연결은 되었지만 sessionKey를 받지 못했습니다."
                   )
                 );
 
@@ -345,27 +368,27 @@ export class ChzzkChat {
               }
 
 
+              this.sessionKey =
+                sessionKey;
+
+
               console.log(
-                "🔑 Session Key:",
-                this.sessionKey
+                "🔑 sessionKey 획득"
               );
 
 
               try {
 
+                /*
+                 * CHAT 구독
+                 */
+
                 await this.subscribeChat();
 
 
-                this.subscribed =
-                  true;
-
-
                 this.onStatus(
-                  "실시간 채팅 구독 완료"
+                  "치지직 채팅 구독 요청 완료"
                 );
-
-
-                finishResolve();
 
               } catch (error) {
 
@@ -379,7 +402,7 @@ export class ChzzkChat {
 
 
             /*
-             * subscribed
+             * 채팅 구독 완료
              */
 
             if (
@@ -387,14 +410,23 @@ export class ChzzkChat {
               "subscribed"
             ) {
 
+              const eventType =
+                data?.data?.eventType;
+
+
+              const channelId =
+                data?.data?.channelId;
+
+
               console.log(
-                "📡 구독 결과:",
-                data
+                "📡 치지직 이벤트 구독 완료:",
+                eventType,
+                channelId
               );
 
 
               if (
-                data?.data?.eventType ===
+                eventType ===
                 "CHAT"
               ) {
 
@@ -406,13 +438,16 @@ export class ChzzkChat {
                   "실시간 채팅 수신 준비 완료"
                 );
 
+
+                finishResolve();
+
               }
 
             }
 
 
             /*
-             * revoked
+             * 권한 취소
              */
 
             if (
@@ -431,7 +466,7 @@ export class ChzzkChat {
 
 
         /*
-         * 실제 채팅
+         * 실제 CHAT 이벤트
          */
 
         socket.on(
@@ -451,10 +486,15 @@ export class ChzzkChat {
 
             console.log(
               "💬 CHZZK CHAT:",
-              JSON.stringify(
-                data
-              )
+              JSON.stringify(data)
             );
+
+
+            const messageTime =
+              Number(
+                data.messageTime ||
+                Date.now()
+              );
 
 
             const message = {
@@ -467,8 +507,7 @@ export class ChzzkChat {
                   data.senderChannelId ||
                     "",
 
-                  data.messageTime ||
-                    Date.now(),
+                  messageTime,
 
                   data.content ||
                     ""
@@ -491,10 +530,7 @@ export class ChzzkChat {
 
 
               timestamp:
-                Number(
-                  data.messageTime ||
-                  Date.now()
-                ),
+                messageTime,
 
 
               senderChannelId:
@@ -503,6 +539,10 @@ export class ChzzkChat {
 
             };
 
+
+            /*
+             * 서버의 채팅 저장 처리
+             */
 
             this.onChat(
               message
@@ -513,7 +553,7 @@ export class ChzzkChat {
 
 
         /*
-         * disconnect
+         * Socket 연결 종료
          */
 
         socket.on(
@@ -528,7 +568,7 @@ export class ChzzkChat {
 
 
             console.log(
-              "⚠️ CHZZK Socket 종료:",
+              "⚠️ 치지직 Socket 종료:",
               reason
             );
 
@@ -562,7 +602,7 @@ export class ChzzkChat {
 
 
         /*
-         * connect_error
+         * Socket 연결 오류
          */
 
         socket.on(
@@ -570,7 +610,7 @@ export class ChzzkChat {
           error => {
 
             console.error(
-              "❌ CHZZK Socket 연결 오류:",
+              "❌ 치지직 Socket 연결 오류:",
               error
             );
 
@@ -589,7 +629,7 @@ export class ChzzkChat {
 
 
         /*
-         * error
+         * Socket 일반 오류
          */
 
         socket.on(
@@ -597,7 +637,7 @@ export class ChzzkChat {
           error => {
 
             console.error(
-              "❌ CHZZK Socket error:",
+              "❌ 치지직 Socket error:",
               error
             );
 
@@ -606,10 +646,13 @@ export class ChzzkChat {
 
 
         console.log(
-          "🔌 Socket 연결 시도:",
-          sessionUrl
+          "🔌 치지직 Socket 연결 시도"
         );
 
+
+        /*
+         * 실제 연결
+         */
 
         socket.connect();
 
@@ -618,6 +661,10 @@ export class ChzzkChat {
 
   }
 
+
+  /*
+   * CHAT 이벤트 구독
+   */
 
   async subscribeChat() {
 
@@ -631,7 +678,7 @@ export class ChzzkChat {
 
 
     this.onStatus(
-      "채팅 이벤트 구독 요청 중..."
+      "치지직 CHAT 이벤트 구독 중..."
     );
 
 
@@ -640,6 +687,13 @@ export class ChzzkChat {
         `${CHZZK_API}/open/v1/sessions/events/subscribe/chat`
       );
 
+
+    /*
+     * 중요:
+     *
+     * sessionKey는 POST body가 아니라
+     * query parameter로 전달
+     */
 
     url.searchParams.set(
       "sessionKey",
@@ -651,7 +705,6 @@ export class ChzzkChat {
       await fetch(
         url.toString(),
         {
-
           method:
             "POST",
 
@@ -664,7 +717,6 @@ export class ChzzkChat {
               `Bearer ${this.accessToken}`
 
           }
-
         }
       );
 
@@ -688,14 +740,20 @@ export class ChzzkChat {
 
 
     console.log(
-      "CHAT 구독 상태:",
+      "================================="
+    );
+
+    console.log(
+      "📡 CHAT 구독 응답:",
       response.status
     );
 
+    console.log(
+      text
+    );
 
     console.log(
-      "CHAT 구독 응답:",
-      text
+      "================================="
     );
 
 
@@ -704,20 +762,25 @@ export class ChzzkChat {
       throw new Error(
         data?.message ||
         data?.error ||
-        `채팅 구독 실패: HTTP ${response.status} ${text}`
+        `치지직 CHAT 구독 실패: HTTP ${response.status} ${text}`
       );
 
     }
 
 
     console.log(
-      "✅ CHAT 이벤트 구독 요청 성공"
+      "✅ 치지직 CHAT 구독 요청 성공"
     );
 
   }
 
 
   normalizeData(raw) {
+
+    /*
+     * Socket.IO 데이터가
+     * 배열 형태로 들어오는 경우 처리
+     */
 
     if (
       Array.isArray(raw)
