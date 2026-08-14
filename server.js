@@ -6,8 +6,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import pg from "pg";
 
 import { ChzzkChat } from "./chzzk-chat.js";
+
+const { Pool } = pg;
 
 
 /* =========================================================
@@ -619,93 +622,246 @@ async function resolveChannelId(
  * GET /open/v1/lives
  */
 
+/* =========================================================
+   현재 방송 조회
+========================================================= */
+
+/*
+ * 로그인한 사용자의 channelId만 확인한다.
+ *
+ * 기존:
+ *   GET /open/v1/lives?size=20
+ *
+ * 문제:
+ *   현재 방송 중인 전체 라이브 목록에서
+ *   channelId를 찾아야 했음.
+ *
+ * 변경:
+ *   로그인한 사용자의 channelId를 직접 넣어서
+ *   해당 채널의 방송 상세만 조회한다.
+ *
+ * 주의:
+ *   아래 endpoint는 치지직 공식 Open API가 아닌
+ *   치지직 내부/비공식 API 방식이다.
+ */
+
 async function getCurrentLive(
   channelId
 ) {
 
   if (!channelId) {
+
+    console.log(
+      "⚠️ channelId가 없어 방송 상태를 확인할 수 없습니다."
+    );
+
     return null;
+
   }
 
+
   const url =
-    `${CHZZK_API}/open/v1/lives?size=20`;
+    `https://api.chzzk.naver.com/service/v2/channels/${encodeURIComponent(channelId)}/live-detail`;
+
 
   console.log(
-    "📡 방송 상태 조회:",
+    "📡 로그인한 채널 방송 상태 조회:",
     channelId
   );
 
-  const data =
-    await chzzkFetch(
-      url,
-      null,
-      {
-        headers: {
-          "Client-Id":
-            CHZZK_CLIENT_ID,
 
-          "Client-Secret":
-            CHZZK_CLIENT_SECRET
+  try {
+
+    const response =
+      await fetch(
+        url,
+        {
+          method: "GET",
+
+          headers: {
+
+            Accept:
+              "application/json",
+
+            "User-Agent":
+              "Mozilla/5.0"
+
+          }
         }
-      }
-    );
+      );
 
-  console.log(
-    "📡 방송 API 응답:",
-    JSON.stringify(
-      data,
-      null,
-      2
-    )
-  );
 
-  const content =
-    data?.data ||
-    data?.content ||
-    [];
+    const text =
+      await response.text();
 
-  if (
-    !Array.isArray(content)
-  ) {
-    console.error(
-      "❌ 방송 목록 배열을 찾지 못했습니다."
-    );
-
-    return null;
-  }
-
-  const live =
-    content.find(
-      item =>
-        String(
-          item?.channelId
-        ) ===
-        String(
-          channelId
-        )
-    );
-
-  if (!live) {
 
     console.log(
-      "⚫ 현재 방송 중이 아닙니다:",
-      channelId
+      "📡 방송 상태 HTTP:",
+      response.status
     );
 
+
+    /*
+     * 방송이 아닐 때 API가
+     * 200이 아닌 응답을 줄 수도 있으므로
+     * 여기서는 null 처리한다.
+     */
+
+    if (!response.ok) {
+
+      console.log(
+        "⚫ 해당 채널 방송 정보 없음:",
+        response.status
+      );
+
+      return null;
+
+    }
+
+
+    let data =
+      null;
+
+
+    try {
+
+      data =
+        text
+          ? JSON.parse(text)
+          : null;
+
+    } catch {
+
+      console.error(
+        "❌ 방송 상태 JSON 파싱 실패:",
+        text
+      );
+
+      return null;
+
+    }
+
+
+    console.log(
+      "📡 방송 상세 응답:",
+      JSON.stringify(
+        data,
+        null,
+        2
+      )
+    );
+
+
+    /*
+     * 치지직 응답
+     *
+     * {
+     *   content: {
+     *      ...
+     *   }
+     * }
+     */
+
+    const content =
+      data?.content ||
+      null;
+
+
+    /*
+     * 방송 정보가 없으면
+     * 현재 방송하지 않는 상태
+     */
+
+    if (!content) {
+
+      console.log(
+        "⚫ 현재 방송 중이 아닙니다:",
+        channelId
+      );
+
+      return null;
+
+    }
+
+
+    /*
+     * liveDetail 내부에 실제 방송 정보가
+     * 들어오는 경우도 대응
+     */
+
+    const live =
+      content?.liveDetail ||
+      content?.live ||
+      content;
+
+
+    /*
+     * 방송 ID 확인
+     */
+
+    const liveId =
+      live?.liveId ||
+      live?.liveNo ||
+      live?.id ||
+      null;
+
+
+    /*
+     * liveId가 전혀 없다면
+     * 실제 방송 정보가 없는 것으로 처리
+     */
+
+    if (!liveId) {
+
+      console.log(
+        "⚫ 방송 정보는 응답됐지만 liveId가 없습니다."
+      );
+
+      return null;
+
+    }
+
+
+    console.log(
+      "🔴 로그인한 채널 방송 발견:",
+      live?.liveTitle ||
+      live?.title ||
+      "(제목 없음)"
+    );
+
+
+    console.log(
+      "📺 Live ID:",
+      liveId
+    );
+
+
+    return normalizeLive({
+
+      ...live,
+
+      liveId,
+
+      channelId:
+        live?.channelId ||
+        channelId
+
+    });
+
+  } catch (error) {
+
+    console.error(
+      "❌ 특정 채널 방송 상태 조회 실패:",
+      error.message
+    );
+
+
     return null;
+
   }
 
-  console.log(
-    "🔴 방송 발견:",
-    live.liveTitle,
-    "liveId:",
-    live.liveId
-  );
-
-  return normalizeLive(
-    live
-  );
 }
+
 
 /* =========================================================
    방송 정보 정리
@@ -716,7 +872,9 @@ function normalizeLive(
 ) {
 
   if (!live) {
+
     return null;
+
   }
 
 
@@ -728,37 +886,47 @@ function normalizeLive(
       live.id ||
       null,
 
+
     channelId:
       live.channelId ||
       null,
+
 
     liveTitle:
       live.liveTitle ||
       live.title ||
       "",
 
+
     status:
       live.status ||
       null,
 
+
     categoryType:
       live.categoryType ||
       null,
+
 
     categoryId:
       live.categoryId ||
       live.liveCategory ||
       null,
 
+
     concurrentUserCount:
       Number(
         live.concurrentUserCount ||
+        live.concurrentUserCountNow ||
         0
       ),
 
+
     openDate:
       live.openDate ||
+      live.startDate ||
       null,
+
 
     raw:
       live
@@ -2964,7 +3132,7 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
     error:
       `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
     detail:
-     aitext
+     aiText
     
   });
 }
