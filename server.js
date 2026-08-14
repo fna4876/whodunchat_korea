@@ -627,45 +627,52 @@ async function getCurrentLive(
     return null;
   }
 
-
   const url =
     `${CHZZK_API}/open/v1/lives?size=20`;
 
+  console.log(
+    "📡 방송 상태 조회:",
+    channelId
+  );
 
   const data =
     await chzzkFetch(
       url,
       null,
       {
-
         headers: {
-
           "Client-Id":
             CHZZK_CLIENT_ID,
 
           "Client-Secret":
             CHZZK_CLIENT_SECRET
-
         }
-
       }
     );
 
+  console.log(
+    "📡 방송 API 응답:",
+    JSON.stringify(
+      data,
+      null,
+      2
+    )
+  );
 
   const content =
-    data?.content;
-
+    data?.data ||
+    data?.content ||
+    [];
 
   if (
-    !Array.isArray(
-      content
-    )
+    !Array.isArray(content)
   ) {
+    console.error(
+      "❌ 방송 목록 배열을 찾지 못했습니다."
+    );
 
     return null;
-
   }
-
 
   const live =
     content.find(
@@ -678,20 +685,27 @@ async function getCurrentLive(
         )
     );
 
-
   if (!live) {
 
-    return null;
+    console.log(
+      "⚫ 현재 방송 중이 아닙니다:",
+      channelId
+    );
 
+    return null;
   }
 
+  console.log(
+    "🔴 방송 발견:",
+    live.liveTitle,
+    "liveId:",
+    live.liveId
+  );
 
   return normalizeLive(
     live
   );
-
 }
-
 
 /* =========================================================
    방송 정보 정리
@@ -2443,6 +2457,36 @@ app.get(
   }
 );
 
+app.get(
+  "/api/chat/history",
+  requireLogin,
+  (
+    req,
+    res
+  ) => {
+
+    const channelId =
+      getChannelId(req);
+
+    const history =
+      getChatHistory(
+        channelId
+      );
+
+    res.json({
+      ok: true,
+
+      channelId,
+
+      count:
+        history.length,
+
+      messages:
+        history
+    });
+
+  }
+);
 
 /* =========================================================
    기존 index.html 호환용
