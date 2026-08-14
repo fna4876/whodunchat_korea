@@ -1068,79 +1068,57 @@ export class ChzzkChat {
      데이터 정리
   ======================================================= */
 
-  normalizeData(
-    raw
+  normalizeData(raw) {
+
+  let data = raw;
+
+
+  /*
+   * Socket.IO에서 배열로 들어오는 경우
+   */
+  if (
+    Array.isArray(data)
   ) {
 
-    if (
-      Array.isArray(raw)
-    ) {
-
-      return (
-        raw[0] ||
-        null
-      );
-
-    }
-
-
-    return raw ||
+    data =
+      data[0] ||
       null;
 
   }
 
 
-  /* =======================================================
-     종료
-  ======================================================= */
+  /*
+   * CHZZK SYSTEM / CHAT이
+   * JSON 문자열로 들어오는 경우
+   */
+  if (
+    typeof data ===
+    "string"
+  ) {
 
-  disconnect() {
+    try {
 
-    this.closed =
-      true;
+      data =
+        JSON.parse(
+          data
+        );
 
+    } catch (error) {
 
-    this.connected =
-      false;
-
-
-    this.subscribed =
-      false;
-
-
-    if (
-      this.reconnectTimer
-    ) {
-
-      clearTimeout(
-        this.reconnectTimer
+      console.error(
+        "❌ CHZZK JSON 파싱 실패:",
+        data
       );
 
-
-      this.reconnectTimer =
-        null;
+      return null;
 
     }
 
-
-    if (
-      this.socket
-    ) {
-
-      try {
-
-        this.socket.disconnect();
-
-      } catch {}
-
-      this.socket =
-        null;
-
-    }
+  }
 
 
-    this.sessionKey =
-      null;
+  return data ||
+    null;
 
   }
 
