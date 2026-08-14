@@ -2701,6 +2701,498 @@ app.get(
   }
 );
 
+/* =========================================================
+   사건 생성
+========================================================= */
+
+app.post(
+  "/api/case",
+  requireLogin,
+  async (
+    req,
+    res
+  ) => {
+
+    try {
+
+      const messages =
+        Array.isArray(req.body?.messages)
+          ? req.body.messages
+          : [];
+
+
+      if (messages.length < 3) {
+
+        return res.status(400).json({
+
+          ok: false,
+
+          error:
+            "사건 생성에는 최소 3개의 채팅이 필요합니다."
+
+        });
+
+      }
+
+
+      /*
+       * OpenAI API Key 확인
+       */
+
+      const apiKey =
+        String(
+          process.env.OPENAI_API_KEY ||
+          ""
+        ).trim();
+
+
+      if (!apiKey) {
+
+        return res.status(500).json({
+
+          ok: false,
+
+          error:
+            "OPENAI_API_KEY가 Render 환경변수에 없습니다."
+
+        });
+
+      }
+
+
+      /*
+       * AI에게 전달할 채팅 정리
+       *
+       * 너무 많은 채팅을 한꺼번에 보내지 않고
+       * 최근 최대 200개만 사용
+       */
+
+      const chatText =
+        messages
+          .slice(-200)
+          .map(
+            message => {
+
+              const nickname =
+                String(
+                  message?.nickname ||
+                  "익명"
+                );
+
+              const content =
+                String(
+                  message?.content ||
+                  ""
+                );
+
+              return (
+                `${nickname}: ${content}`
+              );
+
+            }
+          )
+          .filter(
+            line =>
+              line.split(": ").slice(1).join(": ").trim()
+          )
+          .join("\n");
+
+
+      if (!chatText.trim()) {
+
+        return res.status(400).json({
+
+          ok: false,
+
+          error:
+            "분석할 채팅 내용이 없습니다."
+
+        });
+
+      }
+
+
+      /*
+       * 사건 생성 프롬프트
+       */
+
+      const prompt = `
+
+너는 "후던챗"이라는 치지직 채팅 추리 게임의 사건 생성 AI다.
+
+아래 방송 채팅을 분석해서 하나의 허구적인 추리 사건을 만들어라.
+
+중요:
+- 실제 인물을 범죄자로 단정하지 않는다.
+- 채팅에 등장하는 닉네임을 게임 속 허구의 용의자로 사용한다.
+- 실제 범죄 사실처럼 보이지 않도록 완전히 허구의 사건으로 만든다.
+- 채팅 내용을 바탕으로 그럴듯한 단서를 만든다.
+- 너무 억지스럽거나 채팅과 관계없는 사건을 만들지 않는다.
+- 용의자는 3~5명 정도 만든다.
+- 증거는 3~6개 만든다.
+- 반드시 정답 용의자 1명을 정한다.
+- 모든 용의자가 어느 정도 의심스럽게 보여야 한다.
+- evidence는 채팅의 실제 발언을 바탕으로 추리할 수 있게 만든다.
+
+반드시 아래 JSON 형식만 출력한다.
+
+{
+  "brief": "사건의 간단한 설명",
+  "suspects": ["닉네임1", "닉네임2", "닉네임3"],
+  "suspect": "정답 닉네임",
+  "exhibits": [
+    {
+      "text": "증거 설명"
+    },
+    {
+      "text": "증거 설명"
+    }
+  ]
+}
+
+채팅:
+${chatText}
+
+`;
+
+
+      /*
+       * OpenAI API 호출
+       */
+
+      const aiResponse =
+        await fetch(
+          "https://api.openai.com/v1/chat/completions",
+          {
+
+            method:
+              "POST",
+
+            headers: {
+
+              "Content-Type":
+                "application/json",
+
+              "Authorization":
+                `Bearer ${apiKey}`
+
+            },
+
+            body:
+              JSON.stringify({
+
+                model:
+                  process.env.OPENAI_MODEL ||
+                  "gpt-4o-mini",
+
+                temperature:
+                  0.8,
+
+                response_format: {
+                  type:
+                    "json_object"
+                },
+
+                messages: [
+
+                  {
+                    role:
+                      "system",
+
+                    content:
+                      "너는 후던챗 추리 게임의 사건 생성 AI다. 반드시 유효한 JSON만 반환한다."
+                  },
+
+                  {
+                    role:
+                      "user",
+
+                    content:
+                      prompt
+                  }
+
+                ]
+
+              })
+
+          }
+        );
+
+
+      const aiText =
+        await aiResponse.text();
+
+
+      let aiData =
+        null;
+
+
+      try {
+
+        aiData =
+          JSON.parse(
+            aiText
+          );
+
+      } catch {
+
+        aiData =
+          null;
+
+      }
+
+
+      if (
+        !aiResponse.ok
+      ) {
+
+        console.error(
+          "❌ OpenAI API 오류:",
+          aiText
+        );
+
+
+        return res.status(500).json({
+
+          ok: false,
+
+          error:
+            `AI 사건 생성 실패: HTTP ${aiResponse.status}`
+
+        });
+
+      }
+
+
+      const content =
+        aiData
+          ?.choices?.[0]
+          ?.message?.content;
+
+
+      if (!content) {
+
+        throw new Error(
+          "AI 응답 내용이 없습니다."
+        );
+
+      }
+
+
+      /*
+       * AI JSON 파싱
+       */
+
+      let caseData;
+
+
+      try {
+
+        caseData =
+          typeof content === "string"
+            ? JSON.parse(content)
+            : content;
+
+      } catch {
+
+        console.error(
+          "❌ AI JSON 파싱 실패:",
+          content
+        );
+
+        throw new Error(
+          "AI가 올바른 사건 데이터를 반환하지 않았습니다."
+        );
+
+      }
+
+
+      /*
+       * 데이터 검증
+       */
+
+      const suspects =
+        Array.isArray(
+          caseData.suspects
+        )
+          ? caseData.suspects
+              .map(
+                name =>
+                  String(
+                    name || ""
+                  ).trim()
+              )
+              .filter(Boolean)
+          : [];
+
+
+      const exhibits =
+        Array.isArray(
+          caseData.exhibits
+        )
+          ? caseData.exhibits
+              .map(
+                item => ({
+
+                  text:
+                    String(
+                      item?.text ||
+                      ""
+                    ).trim()
+
+                })
+              )
+              .filter(
+                item =>
+                  item.text
+              )
+          : [];
+
+
+      const suspect =
+        String(
+          caseData.suspect ||
+          ""
+        ).trim();
+
+
+      const brief =
+        String(
+          caseData.brief ||
+          "채팅 속 단서를 바탕으로 사건이 발생했습니다."
+        ).trim();
+
+
+      if (
+        suspects.length < 2
+      ) {
+
+        throw new Error(
+          "AI가 충분한 용의자를 생성하지 못했습니다."
+        );
+
+      }
+
+
+      if (
+        !suspect
+      ) {
+
+        throw new Error(
+          "AI가 사건의 정답을 지정하지 않았습니다."
+        );
+
+      }
+
+
+      if (
+        !suspects.includes(
+          suspect
+        )
+      ) {
+
+        throw new Error(
+          "사건 정답이 용의자 목록에 없습니다."
+        );
+
+      }
+
+
+      if (
+        exhibits.length < 2
+      ) {
+
+        throw new Error(
+          "AI가 충분한 증거를 생성하지 못했습니다."
+        );
+
+      }
+
+
+      /*
+       * 최종 사건 데이터
+       */
+
+      const result = {
+
+        ok: true,
+
+        brief,
+
+        suspects:
+          suspects.slice(
+            0,
+            5
+          ),
+
+        suspect,
+
+        exhibits:
+          exhibits.slice(
+            0,
+            6
+          )
+
+      };
+
+
+      console.log("");
+      console.log(
+        "================================="
+      );
+
+      console.log(
+        "🕵️ 사건 생성 완료"
+      );
+
+      console.log(
+        "용의자:",
+        result.suspects
+      );
+
+      console.log(
+        "정답:",
+        result.suspect
+      );
+
+      console.log(
+        "증거:",
+        result.exhibits.length
+      );
+
+      console.log(
+        "================================="
+      );
+      console.log("");
+
+
+      return res.json(
+        result
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "❌ /api/case 오류:",
+        error
+      );
+
+
+      return res.status(500).json({
+
+        ok: false,
+
+        error:
+          error.message ||
+          "사건 생성 중 오류가 발생했습니다."
+
+      });
+
+    }
+
+  }
+);
 
 /* =========================================================
    API 404
