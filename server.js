@@ -2922,6 +2922,7 @@ ${chatText}
       const aiText =
         await aiResponse.text();
 
+console.log("🔴 OpenAI 실제 응답:", aiText);
 
       let aiData =
         null;
