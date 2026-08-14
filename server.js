@@ -2942,27 +2942,32 @@ ${chatText}
       }
 
 
-      if (
-        !aiResponse.ok
-      ) {
+     if (!aiResponse.ok) {
+  console.error(
+    "❌ OpenAI API 오류:",
+    aiText
+  );
 
-        console.error(
-          "❌ OpenAI API 오류:",
-          aiText
-        );
+  let detail = "";
 
+  try {
+    const errorData = JSON.parse(aiText);
 
-        return res.status(500).json({
+    detail =
+      errorData?.error?.message ||
+      errorData?.message ||
+      "";
+  } catch {
+    detail = aiText;
+  }
 
-          ok: false,
-
-          error:
-            `AI 사건 생성 실패: HTTP ${aiResponse.status}`
-
-        });
-
-      }
-
+  return res.status(aiResponse.status).json({
+    ok: false,
+    error:
+      `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
+    detail
+  });
+}
 
       const content =
         aiData
