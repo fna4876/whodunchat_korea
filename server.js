@@ -2965,7 +2965,9 @@ ${chatText}
     ok: false,
     error:
       `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
-    detail
+    detail:
+     aitext
+    
   });
 }
 
