@@ -1765,6 +1765,35 @@ app.get(
         req
       );
 
+      await pool.query(
+  `
+  INSERT INTO chzzk_accounts (
+    channel_id,
+    user_data,
+    access_token,
+    refresh_token,
+    updated_at
+  )
+  VALUES ($1, $2, $3, $4, NOW())
+  ON CONFLICT (channel_id)
+  DO UPDATE SET
+    user_data = EXCLUDED.user_data,
+    access_token = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    updated_at = NOW()
+  `,
+  [
+    channelId,
+    JSON.stringify(user),
+    accessToken,
+    refreshToken || null
+  ]
+);
+
+console.log(
+  "💾 치지직 로그인 정보 PostgreSQL 저장 완료:",
+  channelId
+);
 
       const params =
         new URLSearchParams({
