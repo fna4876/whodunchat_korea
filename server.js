@@ -3532,13 +3532,100 @@ async function initDatabase() {
 app.listen(
   PORT,
   "0.0.0.0",
-  () => {
+  async() => {
 
     console.log("");
 
-    testDatabase();
-    initDatabase();
+     await testDatabase();
+   await initDatabase();
+await restoreSavedAccounts();
     
+    async function restoreSavedAccounts() {
+  try {
+    const result = await pool.query(`
+      SELECT
+        channel_id,
+        user_data,
+        access_token,
+        refresh_token
+      FROM chzzk_accounts
+    `);
+
+    console.log(
+      `🔄 저장된 치지직 계정 ${result.rows.length}개 복구 시작`
+    );
+
+    for (const account of result.rows) {
+      try {
+        const channelId = account.channel_id;
+        const accessToken = account.access_token;
+
+        if (!channelId || !accessToken) {
+          console.log(
+            "⚠️ 저장된 계정 정보가 부족해서 건너뜀:",
+            channelId
+          );
+          continue;
+        }
+
+        /*
+         * 서버 메모리에 복구
+         */
+
+        chatHistories.set(
+          channelId,
+          []
+        );
+
+        /*
+         * 자동 방송 감시 시작
+         */
+
+        const fakeReq = {
+          session: {
+            channelId,
+            accessToken,
+            refreshToken:
+              account.refresh_token || null,
+            user:
+              account.user_data || null
+          }
+        };
+
+        await startLiveWatcher(
+          fakeReq
+        );
+
+        console.log(
+          "✅ 저장된 계정 자동 감시 복구:",
+          channelId
+        );
+
+      } catch (error) {
+
+        console.error(
+          "❌ 계정 자동 복구 실패:",
+          account.channel_id,
+          error.message
+        );
+
+      }
+    }
+
+    console.log(
+      "🔄 저장된 계정 복구 완료"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ 저장된 계정 복구 실패:",
+      error.message
+    );
+
+  }
+}
+
     console.log(
       "================================="
     );
