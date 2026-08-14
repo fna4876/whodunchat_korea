@@ -22,6 +22,17 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+pool.on("error", error => {
+  console.error("❌ PostgreSQL 오류:", error);
+});
+
 const PORT =
   Number(process.env.PORT || 3000);
 
@@ -3446,6 +3457,24 @@ app.use(
 /* =========================================================
    서버 실행
 ========================================================= */
+async function testDatabase() {
+  try {
+    const result = await pool.query("SELECT NOW()");
+
+    console.log(
+      "✅ PostgreSQL 연결 성공:",
+      result.rows[0]
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ PostgreSQL 연결 실패:",
+      error.message
+    );
+
+  }
+}
 
 app.listen(
   PORT,
@@ -3453,6 +3482,9 @@ app.listen(
   () => {
 
     console.log("");
+
+    testDatabase();
+
     console.log(
       "================================="
     );
