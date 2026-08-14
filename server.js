@@ -22,6 +22,19 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const PORT = Number(process.env.PORT || 3000);
+
+const CHZZK_API =
+  "https://openapi.chzzk.naver.com";
+
+const CHZZK_LOGIN_URL =
+  "https://chzzk.naver.com/account-interlock";
+
+
+/* =========================================================
+   PostgreSQL
+========================================================= */
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -32,15 +45,6 @@ const pool = new Pool({
 pool.on("error", error => {
   console.error("❌ PostgreSQL 오류:", error);
 });
-
-const PORT =
-  Number(process.env.PORT || 3000);
-
-const CHZZK_API =
-  "https://openapi.chzzk.naver.com";
-
-const CHZZK_LOGIN_URL =
-  "https://chzzk.naver.com/account-interlock";
 
 
 /* =========================================================
@@ -79,65 +83,13 @@ const SESSION_SECRET =
    메모리 저장소
 ========================================================= */
 
-/*
- * 현재 연결된 채팅
- *
- * channelId
- * ->
- * {
- *   chat,
- *   collecting,
- *   messages
- * }
- */
+const chatConnections = new Map();
 
-const chatConnections =
-  new Map();
+const liveWatchers = new Map();
 
+const chatHistories = new Map();
 
-/*
- * 방송 감시
- *
- * channelId
- * ->
- * {
- *   channelId,
- *   accessToken,
- *   req,
- *   isLive,
- *   liveId,
- *   liveInfo,
- *   timer,
- *   checking,
- *   stopped
- * }
- */
-
-const liveWatchers =
-  new Map();
-
-
-/*
- * 저장된 채팅
- *
- * 사이트를 닫아도
- * 서버가 살아있는 동안 유지된다.
- *
- * channelId
- * ->
- * message[]
- */
-
-const chatHistories =
-  new Map();
-
-
-/*
- * 채널별 최대 저장 채팅 수
- */
-
-const MAX_HISTORY =
-  10000;
+const MAX_HISTORY = 10000;
 
 
 /* =========================================================
@@ -214,7 +166,6 @@ const publicPath =
     __dirname,
     "public"
   );
-
 
 if (
   fs.existsSync(
@@ -376,12 +327,10 @@ function saveChatMessage(
     return;
   }
 
-
   let history =
     chatHistories.get(
       channelId
     );
-
 
   if (!history) {
 
@@ -394,10 +343,6 @@ function saveChatMessage(
 
   }
 
-
-  /*
-   * 중복 방지
-   */
 
   const messageId =
     message?.id;
@@ -420,11 +365,6 @@ function saveChatMessage(
     message
   );
 
-
-  /*
-   * 너무 많이 쌓이지 않도록
-   * 최근 10000개만 유지
-   */
 
   if (
     history.length >
@@ -454,7 +394,6 @@ function getChatHistory(
     return [];
   }
 
-
   return (
     chatHistories.get(
       channelId
@@ -476,9 +415,7 @@ async function chzzkFetch(
 ) {
 
   const headers = {
-
     ...(options.headers || {})
-
   };
 
 
@@ -504,8 +441,7 @@ async function chzzkFetch(
     await response.text();
 
 
-  let data =
-    null;
+  let data = null;
 
 
   try {
@@ -517,8 +453,7 @@ async function chzzkFetch(
 
   } catch {
 
-    data =
-      null;
+    data = null;
 
   }
 
@@ -622,40 +557,6 @@ async function resolveChannelId(
    현재 방송 조회
 ========================================================= */
 
-/*
- * 중요
- *
- * 이 API는 사용자 Access Token이 아니라
- * Client ID + Client Secret으로 조회한다.
- *
- * 치지직 공식 Live API:
- *
- * GET /open/v1/lives
- */
-
-/* =========================================================
-   현재 방송 조회
-========================================================= */
-
-/*
- * 로그인한 사용자의 channelId만 확인한다.
- *
- * 기존:
- *   GET /open/v1/lives?size=20
- *
- * 문제:
- *   현재 방송 중인 전체 라이브 목록에서
- *   channelId를 찾아야 했음.
- *
- * 변경:
- *   로그인한 사용자의 channelId를 직접 넣어서
- *   해당 채널의 방송 상세만 조회한다.
- *
- * 주의:
- *   아래 endpoint는 치지직 공식 Open API가 아닌
- *   치지직 내부/비공식 API 방식이다.
- */
-
 async function getCurrentLive(
   channelId
 ) {
@@ -712,12 +613,6 @@ async function getCurrentLive(
     );
 
 
-    /*
-     * 방송이 아닐 때 API가
-     * 200이 아닌 응답을 줄 수도 있으므로
-     * 여기서는 null 처리한다.
-     */
-
     if (!response.ok) {
 
       console.log(
@@ -730,8 +625,7 @@ async function getCurrentLive(
     }
 
 
-    let data =
-      null;
+    let data = null;
 
 
     try {
@@ -763,25 +657,10 @@ async function getCurrentLive(
     );
 
 
-    /*
-     * 치지직 응답
-     *
-     * {
-     *   content: {
-     *      ...
-     *   }
-     * }
-     */
-
     const content =
       data?.content ||
       null;
 
-
-    /*
-     * 방송 정보가 없으면
-     * 현재 방송하지 않는 상태
-     */
 
     if (!content) {
 
@@ -795,20 +674,11 @@ async function getCurrentLive(
     }
 
 
-    /*
-     * liveDetail 내부에 실제 방송 정보가
-     * 들어오는 경우도 대응
-     */
-
     const live =
       content?.liveDetail ||
       content?.live ||
       content;
 
-
-    /*
-     * 방송 ID 확인
-     */
 
     const liveId =
       live?.liveId ||
@@ -816,11 +686,6 @@ async function getCurrentLive(
       live?.id ||
       null;
 
-
-    /*
-     * liveId가 전혀 없다면
-     * 실제 방송 정보가 없는 것으로 처리
-     */
 
     if (!liveId) {
 
@@ -866,7 +731,6 @@ async function getCurrentLive(
       error.message
     );
 
-
     return null;
 
   }
@@ -883,9 +747,7 @@ function normalizeLive(
 ) {
 
   if (!live) {
-
     return null;
-
   }
 
 
@@ -897,33 +759,27 @@ function normalizeLive(
       live.id ||
       null,
 
-
     channelId:
       live.channelId ||
       null,
-
 
     liveTitle:
       live.liveTitle ||
       live.title ||
       "",
 
-
     status:
       live.status ||
       null,
-
 
     categoryType:
       live.categoryType ||
       null,
 
-
     categoryId:
       live.categoryId ||
       live.liveCategory ||
       null,
-
 
     concurrentUserCount:
       Number(
@@ -932,12 +788,10 @@ function normalizeLive(
         0
       ),
 
-
     openDate:
       live.openDate ||
       live.startDate ||
       null,
-
 
     raw:
       live
@@ -1000,10 +854,6 @@ async function startChatCollection(
   }
 
 
-  /*
-   * 기존 연결 정리
-   */
-
   if (existing) {
 
     try {
@@ -1038,10 +888,6 @@ async function startChatCollection(
   );
 
 
-  /*
-   * 기존 저장 기록이 없으면 생성
-   */
-
   if (
     !chatHistories.has(
       channelId
@@ -1065,10 +911,6 @@ async function startChatCollection(
 
       onChat:
         message => {
-
-          /*
-           * 현재 연결 메시지
-           */
 
           const connection =
             chatConnections.get(
@@ -1099,10 +941,6 @@ async function startChatCollection(
 
           }
 
-
-          /*
-           * 서버 저장
-           */
 
           saveChatMessage(
             channelId,
@@ -1170,7 +1008,6 @@ async function startChatCollection(
 
     connection.collecting =
       false;
-
 
     chatConnections.delete(
       channelId
@@ -1279,10 +1116,6 @@ async function checkLiveWatcher(
 
   try {
 
-    /*
-     * 현재 방송 조회
-     */
-
     const live =
       await getCurrentLive(
         channelId
@@ -1327,11 +1160,6 @@ async function checkLiveWatcher(
       );
 
 
-      /*
-       * 새로운 방송이거나
-       * 기존 연결이 사라진 경우
-       */
-
       const connection =
         chatConnections.get(
           channelId
@@ -1349,11 +1177,6 @@ async function checkLiveWatcher(
         );
 
 
-        /*
-         * 이전 채팅 연결이 있다면
-         * 먼저 종료
-         */
-
         if (
           connection
         ) {
@@ -1370,10 +1193,6 @@ async function checkLiveWatcher(
 
         }
 
-
-        /*
-         * 새 방송 채팅 연결
-         */
 
         try {
 
@@ -1399,11 +1218,6 @@ async function checkLiveWatcher(
         !connection ||
         !connection.collecting
       ) {
-
-        /*
-         * 방송 중인데 채팅 연결이 끊어진 경우
-         * 자동 재연결
-         */
 
         console.log(
           "🔄 방송 중 채팅 연결이 없어 재연결합니다."
@@ -1481,10 +1295,6 @@ async function checkLiveWatcher(
       false;
 
 
-    /*
-     * 10초마다 계속 감시
-     */
-
     if (
       liveWatchers.has(
         channelId
@@ -1558,11 +1368,6 @@ async function startLiveWatcher(
 
   }
 
-
-  /*
-   * 이미 감시 중이면
-   * 세션 정보만 최신화
-   */
 
   if (
     liveWatchers.has(
@@ -1650,10 +1455,6 @@ async function startLiveWatcher(
   console.log("");
 
 
-  /*
-   * 즉시 첫 검사
-   */
-
   await checkLiveWatcher(
     channelId
   );
@@ -1712,7 +1513,7 @@ function stopLiveWatcher(
 
 
 /* =========================================================
-   🔐 치지직 로그인 시작
+   치지직 로그인
 ========================================================= */
 
 app.get(
@@ -1764,6 +1565,7 @@ app.get(
       await saveSession(
         req
       );
+
 
       const params =
         new URLSearchParams({
@@ -1821,7 +1623,7 @@ app.get(
 
 
 /* =========================================================
-   🔐 OAuth Callback
+   OAuth Callback
 ========================================================= */
 
 app.get(
@@ -1924,10 +1726,6 @@ app.get(
 
       }
 
-
-      /*
-       * Access Token 요청
-       */
 
       const tokenBody = {
 
@@ -2052,10 +1850,6 @@ app.get(
       );
 
 
-      /*
-       * 사용자 정보
-       */
-
       const result =
         await resolveChannelId(
           accessToken
@@ -2068,43 +1862,46 @@ app.get(
       const user =
         result.user;
 
-        /*
- * PostgreSQL에 로그인 정보 저장
- */
 
-await pool.query(
-  `
-  INSERT INTO chzzk_accounts (
-    channel_id,
-    user_data,
-    access_token,
-    refresh_token,
-    updated_at
-  )
-  VALUES ($1, $2, $3, $4, NOW())
-  ON CONFLICT (channel_id)
-  DO UPDATE SET
-    user_data = EXCLUDED.user_data,
-    access_token = EXCLUDED.access_token,
-    refresh_token = EXCLUDED.refresh_token,
-    updated_at = NOW()
-  `,
-  [
-    channelId,
-    JSON.stringify(user),
-    accessToken,
-    refreshToken || null
-  ]
-);
+      /* =====================================================
+         PostgreSQL 로그인 정보 저장
+      ===================================================== */
 
-console.log(
-  "💾 치지직 로그인 정보 PostgreSQL 저장 완료:",
-  channelId
-);
+      await pool.query(
+        `
+        INSERT INTO chzzk_accounts (
+          channel_id,
+          user_data,
+          access_token,
+          refresh_token,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT (channel_id)
+        DO UPDATE SET
+          user_data = EXCLUDED.user_data,
+          access_token = EXCLUDED.access_token,
+          refresh_token = EXCLUDED.refresh_token,
+          updated_at = NOW()
+        `,
+        [
+          channelId,
+          JSON.stringify(user),
+          accessToken,
+          refreshToken || null
+        ]
+      );
 
-      /*
-       * 세션 저장
-       */
+
+      console.log(
+        "💾 치지직 로그인 정보 PostgreSQL 저장 완료:",
+        channelId
+      );
+
+
+      /* =====================================================
+         Session 저장
+      ===================================================== */
 
       req.session.accessToken =
         accessToken;
@@ -2133,10 +1930,6 @@ console.log(
         req
       );
 
-
-      /*
-       * 채널 기록 초기화
-       */
 
       if (
         !chatHistories.has(
@@ -2178,12 +1971,9 @@ console.log(
       );
 
 
-      /*
-       * 로그인 직후 방송 감시 시작
-       *
-       * 사이트를 나중에 닫아도
-       * 서버에서 계속 감시
-       */
+      /* =====================================================
+         로그인 직후 방송 감시
+      ===================================================== */
 
       try {
 
@@ -2296,7 +2086,6 @@ app.get(
 
 /* =========================================================
    로그인 상태
-   기존 API도 유지
 ========================================================= */
 
 app.get(
@@ -2668,81 +2457,6 @@ app.get(
   }
 );
 
-app.get(
-  "/api/chat/history",
-  requireLogin,
-  (
-    req,
-    res
-  ) => {
-
-    const channelId =
-      getChannelId(req);
-
-    const history =
-      getChatHistory(
-        channelId
-      );
-
-    res.json({
-      ok: true,
-
-      channelId,
-
-      count:
-        history.length,
-
-      messages:
-        history
-    });
-
-  }
-);
-
-/* =========================================================
-   기존 index.html 호환용
-   /api/live/messages
-========================================================= */
-
-app.get(
-  "/api/live/messages",
-  requireLogin,
-  (
-    req,
-    res
-  ) => {
-
-    const channelId =
-      getChannelId(
-        req
-      );
-
-
-    const connection =
-      chatConnections.get(
-        channelId
-      );
-
-
-    res.json({
-
-      ok:
-        true,
-
-      channelId,
-
-      collecting:
-        !!connection?.collecting,
-
-      messages:
-        connection?.messages ||
-        []
-
-    });
-
-  }
-);
-
 
 /* =========================================================
    저장된 전체 채팅
@@ -2792,6 +2506,50 @@ app.get(
 
 
 /* =========================================================
+   기존 index.html 호환
+========================================================= */
+
+app.get(
+  "/api/live/messages",
+  requireLogin,
+  (
+    req,
+    res
+  ) => {
+
+    const channelId =
+      getChannelId(
+        req
+      );
+
+
+    const connection =
+      chatConnections.get(
+        channelId
+      );
+
+
+    res.json({
+
+      ok:
+        true,
+
+      channelId,
+
+      collecting:
+        !!connection?.collecting,
+
+      messages:
+        connection?.messages ||
+        []
+
+    });
+
+  }
+);
+
+
+/* =========================================================
    채팅 기록 삭제
 ========================================================= */
 
@@ -2832,87 +2590,6 @@ app.delete(
 
 
 /* =========================================================
-   로그아웃
-========================================================= */
-
-app.get(
-  "/auth/logout",
-  (
-    req,
-    res
-  ) => {
-
-    const channelId =
-      getChannelId(
-        req
-      );
-
-
-    if (channelId) {
-
-      stopLiveWatcher(
-        channelId
-      );
-
-
-      stopChatCollection(
-        req
-      );
-
-    }
-
-
-    req.session.destroy(
-      () => {
-
-        res.redirect(
-          "/"
-        );
-
-      }
-    );
-
-  }
-);
-
-
-/* =========================================================
-   Health
-========================================================= */
-
-app.get(
-  "/api/health",
-  (
-    req,
-    res
-  ) => {
-
-    res.json({
-
-      ok:
-        true,
-
-      service:
-        "WHODUNCHAT",
-
-      uptime:
-        process.uptime(),
-
-      watchers:
-        liveWatchers.size,
-
-      chats:
-        chatConnections.size,
-
-      histories:
-        chatHistories.size
-
-    });
-
-  }
-);
-
-/* =========================================================
    사건 생성
 ========================================================= */
 
@@ -2927,16 +2604,79 @@ app.post(
     try {
 
       const messages =
-        Array.isArray(req.body?.messages)
+        Array.isArray(
+          req.body?.messages
+        )
           ? req.body.messages
           : [];
 
 
-      if (messages.length < 3) {
+      /*
+       * ★ 중요
+       * 기존 코드에서는 difficulty / caseType이
+       * 정의되어 있지 않아서 ReferenceError가 발생했음.
+       */
+
+      const difficulty =
+        String(
+          req.body?.difficulty ||
+          "normal"
+        ).trim();
+
+
+      const caseType =
+        String(
+          req.body?.caseType ||
+          "random"
+        ).trim();
+
+
+      const allowedDifficulties =
+        [
+          "easy",
+          "normal",
+          "hard"
+        ];
+
+
+      const allowedCaseTypes =
+        [
+          "random",
+          "theft",
+          "missing",
+          "leak",
+          "lie",
+          "betrayal",
+          "threat",
+          "sabotage",
+          "mystery"
+        ];
+
+
+      const finalDifficulty =
+        allowedDifficulties.includes(
+          difficulty
+        )
+          ? difficulty
+          : "normal";
+
+
+      const finalCaseType =
+        allowedCaseTypes.includes(
+          caseType
+        )
+          ? caseType
+          : "random";
+
+
+      if (
+        messages.length < 3
+      ) {
 
         return res.status(400).json({
 
-          ok: false,
+          ok:
+            false,
 
           error:
             "사건 생성에는 최소 3개의 채팅이 필요합니다."
@@ -2945,10 +2685,6 @@ app.post(
 
       }
 
-
-      /*
-       * OpenAI API Key 확인
-       */
 
       const apiKey =
         String(
@@ -2961,7 +2697,8 @@ app.post(
 
         return res.status(500).json({
 
-          ok: false,
+          ok:
+            false,
 
           error:
             "OPENAI_API_KEY가 Render 환경변수에 없습니다."
@@ -2970,13 +2707,6 @@ app.post(
 
       }
 
-
-      /*
-       * AI에게 전달할 채팅 정리
-       *
-       * 너무 많은 채팅을 한꺼번에 보내지 않고
-       * 최근 최대 200개만 사용
-       */
 
       const chatText =
         messages
@@ -2990,11 +2720,13 @@ app.post(
                   "익명"
                 );
 
+
               const content =
                 String(
                   message?.content ||
                   ""
                 );
+
 
               return (
                 `${nickname}: ${content}`
@@ -3004,7 +2736,10 @@ app.post(
           )
           .filter(
             line =>
-              line.split(": ").slice(1).join(": ").trim()
+              line.split(": ")
+                .slice(1)
+                .join(": ")
+                .trim()
           )
           .join("\n");
 
@@ -3013,7 +2748,8 @@ app.post(
 
         return res.status(400).json({
 
-          ok: false,
+          ok:
+            false,
 
           error:
             "분석할 채팅 내용이 없습니다."
@@ -3023,53 +2759,262 @@ app.post(
       }
 
 
-      /*
-       * 사건 생성 프롬프트
-       */
+      /* =====================================================
+         사건 생성 프롬프트
+      ===================================================== */
 
       const prompt = `
 
-너는 "후던챗"이라는 치지직 채팅 추리 게임의 사건 생성 AI다.
+너는 "후던챗"이라는 치지직 방송 채팅 기반 추리 게임의 전문 사건 설계 AI다.
 
-아래 방송 채팅을 분석해서 하나의 허구적인 추리 사건을 만들어라.
+아래 방송 채팅을 분석해서 플레이어가 실제로 추리할 수 있는
+완성도 높은 허구의 추리 사건을 만들어라.
 
-중요:
-- 실제 인물을 범죄자로 단정하지 않는다.
-- 채팅에 등장하는 닉네임을 게임 속 허구의 용의자로 사용한다.
-- 실제 범죄 사실처럼 보이지 않도록 완전히 허구의 사건으로 만든다.
-- 채팅 내용을 바탕으로 그럴듯한 단서를 만든다.
-- 너무 억지스럽거나 채팅과 관계없는 사건을 만들지 않는다.
-- 용의자는 3~5명 정도 만든다.
-- 증거는 3~6개 만든다.
-- 반드시 정답 용의자 1명을 정한다.
-- 모든 용의자가 어느 정도 의심스럽게 보여야 한다.
-- evidence는 채팅의 실제 발언을 바탕으로 추리할 수 있게 만든다.
+단순히 수상한 닉네임 하나를 범인으로 정하는 것이 아니라,
+여러 채팅의 발언과 시간 순서와 모순을 연결해야
+정답을 알아낼 수 있는 사건을 만들어야 한다.
 
-반드시 아래 JSON 형식만 출력한다.
+
+━━━━━━━━━━━━━━━━━━━━━━
+[이번 사건 설정]
+━━━━━━━━━━━━━━━━━━━━━━
+
+난이도:
+${finalDifficulty}
+
+사건 유형:
+${finalCaseType}
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[난이도 규칙]
+━━━━━━━━━━━━━━━━━━━━━━
+
+easy:
+- 용의자 3명
+- 증거 3~4개
+- 핵심 단서가 비교적 명확해야 한다.
+- 채팅 1~2개를 연결하면 정답을 추리할 수 있어야 한다.
+- 미끼 단서는 1개 정도 사용한다.
+- 처음 플레이하는 사람도 풀 수 있는 난이도로 만든다.
+
+normal:
+- 용의자 4명
+- 증거 4~5개
+- 여러 채팅을 연결해야 정답을 찾을 수 있어야 한다.
+- 미끼 단서를 최소 1개 포함한다.
+- 모든 용의자가 서로 다른 이유로 의심스러워야 한다.
+- 단서 하나만 보고 범인을 확정할 수 없어야 한다.
+
+hard:
+- 용의자 5명
+- 증거 5~6개
+- 여러 채팅과 시간 순서를 함께 분석해야 한다.
+- 미끼 단서를 1~2개 포함한다.
+- 용의자들의 발언이 모두 어느 정도 의심스럽게 보여야 한다.
+- 여러 핵심 단서를 연결해야 정답을 확정할 수 있어야 한다.
+- 정답 용의자가 처음부터 눈에 띄면 안 된다.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[사건 유형]
+━━━━━━━━━━━━━━━━━━━━━━
+
+사용자가 선택한 사건 유형을 반드시 반영한다.
+
+가능한 사건 유형:
+
+- random
+- theft
+- missing
+- leak
+- lie
+- betrayal
+- threat
+- sabotage
+- mystery
+
+사건 유형이 random이면
+채팅 내용에 가장 자연스럽게 어울리는 유형을 선택한다.
+
+사건 유형을 만들기 위해 채팅에 없는 사실을
+핵심 증거로 새롭게 만들어서는 안 된다.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[핵심 사건 규칙]
+━━━━━━━━━━━━━━━━━━━━━━
+
+1. 채팅에 실제로 존재하는 정보를 사건의 근거로 사용한다.
+
+2. 채팅에 없는 사실을 핵심 단서로 만들어내지 않는다.
+
+3. 단순히 수상한 말을 한 사람을 범인으로 정하지 않는다.
+
+4. 정답 용의자는 최소 2~3개의 서로 다른 단서가
+   연결될 때 가장 강하게 의심되도록 만든다.
+
+5. 다른 용의자들도 충분히 의심스럽게 만든다.
+
+6. 단서 하나만으로 정답을 확정할 수 없어야 한다.
+
+7. 실제 채팅을 바탕으로 최소 하나의 미끼 단서를 만든다.
+
+8. 미끼 단서는 완전히 거짓인 정보가 아니라
+   플레이어가 충분히 오해할 수 있는 실제 정황이어야 한다.
+
+9. 최종적으로 여러 증거를 종합하면
+   정답 용의자가 논리적으로 드러나야 한다.
+
+10. 사건의 정답에는 반드시 추리 가능한 근거가 있어야 한다.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[용의자 설계]
+━━━━━━━━━━━━━━━━━━━━━━
+
+모든 용의자는 어느 정도 의심스러워야 한다.
+
+각 용의자는 서로 다른 의심 포인트를 가진다.
+
+예를 들어:
+
+용의자 A
+→ 사건과 관련된 수상한 발언
+
+용의자 B
+→ 시간상 이상한 발언
+
+용의자 C
+→ 다른 사람의 발언과 모순
+
+용의자 D
+→ 알기 어려운 정보를 알고 있는 듯한 발언
+
+하지만 최종적으로는
+정답 용의자만 여러 핵심 단서를 동시에 설명할 수 있도록 만든다.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[증거 설계]
+━━━━━━━━━━━━━━━━━━━━━━
+
+증거는 단순한 채팅 복사가 아니다.
+
+플레이어가 왜 그 증거가 중요한지 이해할 수 있도록
+사건의 맥락을 설명한다.
+
+가능하면 다음 요소를 활용한다.
+
+- 시간
+- 발언 순서
+- 서로 다른 사람의 발언
+- 발언의 모순
+- 이상한 행동
+- 정보의 출처
+- 알 수 없어야 할 정보를 알고 있었던 정황
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[추리 구조]
+━━━━━━━━━━━━━━━━━━━━━━
+
+사건은 다음과 같은 흐름을 가진다.
+
+초반:
+여러 용의자가 의심스럽다.
+
+중반:
+서로 다른 채팅의 내용이 연결되기 시작한다.
+
+후반:
+특정 용의자의 발언이나 행동에서
+중요한 모순이 발견된다.
+
+결론:
+여러 증거를 종합했을 때
+한 명만 사건의 조건을 모두 만족한다.
+
+
+절대로
+
+"수상한 말을 했다 → 범인"
+
+이라는 단순한 구조로 만들지 않는다.
+
+대신
+
+첫 번째 발언
++
+두 번째 발언
++
+시간 순서
++
+정보의 모순
++
+사건의 조건
+
+을 종합해야 정답을 알 수 있도록 만든다.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[허구성 및 안전 규칙]
+━━━━━━━━━━━━━━━━━━━━━━
+
+이 사건은 게임을 위한 완전한 허구의 사건이다.
+
+실제 인물을 범죄자로 단정하지 않는다.
+
+채팅 닉네임은 게임 속 허구의 용의자로만 사용한다.
+
+실제 범죄 사실처럼 표현하지 않는다.
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[방송 채팅]
+━━━━━━━━━━━━━━━━━━━━━━
+
+${chatText}
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+[출력 형식]
+━━━━━━━━━━━━━━━━━━━━━━
+
+반드시 아래 JSON 형식으로만 출력한다.
 
 {
-  "brief": "사건의 간단한 설명",
-  "suspects": ["닉네임1", "닉네임2", "닉네임3"],
+  "brief": "플레이어에게 보여줄 사건 설명",
+  "suspects": [
+    "닉네임1",
+    "닉네임2",
+    "닉네임3"
+  ],
   "suspect": "정답 닉네임",
   "exhibits": [
     {
-      "text": "증거 설명"
+      "text": "첫 번째 증거"
     },
     {
-      "text": "증거 설명"
+      "text": "두 번째 증거"
+    },
+    {
+      "text": "세 번째 증거"
     }
   ]
 }
 
-채팅:
-${chatText}
+추가 설명을 출력하지 않는다.
+Markdown을 출력하지 않는다.
+JSON 앞뒤에 다른 문장을 붙이지 않는다.
+반드시 유효한 JSON 하나만 출력한다.
 
 `;
 
 
-      /*
-       * OpenAI API 호출
-       */
+      /* =====================================================
+         OpenAI API
+      ===================================================== */
 
       const aiResponse =
         await fetch(
@@ -3130,7 +3075,12 @@ ${chatText}
       const aiText =
         await aiResponse.text();
 
-console.log("🔴 OpenAI 실제 응답:", aiText);
+
+      console.log(
+        "🔴 OpenAI 실제 응답:",
+        aiText
+      );
+
 
       let aiData =
         null;
@@ -3151,34 +3101,52 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
       }
 
 
-     if (!aiResponse.ok) {
-  console.error(
-    "❌ OpenAI API 오류:",
-    aiText
-  );
+      if (
+        !aiResponse.ok
+      ) {
 
-  let detail = "";
+        console.error(
+          "❌ OpenAI API 오류:",
+          aiText
+        );
 
-  try {
-    const errorData = JSON.parse(aiText);
 
-    detail =
-      errorData?.error?.message ||
-      errorData?.message ||
-      "";
-  } catch {
-    detail = aiText;
-  }
+        let detail =
+          aiText;
 
-  return res.status(aiResponse.status).json({
-    ok: false,
-    error:
-      `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
-    detail:
-     aiText
-    
-  });
-}
+
+        try {
+
+          const errorData =
+            JSON.parse(
+              aiText
+            );
+
+
+          detail =
+            errorData?.error?.message ||
+            errorData?.message ||
+            aiText;
+
+        } catch {}
+
+
+        return res.status(
+          aiResponse.status
+        ).json({
+
+          ok:
+            false,
+
+          error:
+            `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
+
+          detail
+
+        });
+
+      }
+
 
       const content =
         aiData
@@ -3195,9 +3163,9 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
       }
 
 
-      /*
-       * AI JSON 파싱
-       */
+      /* =====================================================
+         AI JSON 파싱
+      ===================================================== */
 
       let caseData;
 
@@ -3216,6 +3184,7 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
           content
         );
 
+
         throw new Error(
           "AI가 올바른 사건 데이터를 반환하지 않았습니다."
         );
@@ -3223,9 +3192,9 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
       }
 
 
-      /*
-       * 데이터 검증
-       */
+      /* =====================================================
+         데이터 검증
+      ===================================================== */
 
       const suspects =
         Array.isArray(
@@ -3290,9 +3259,7 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
       }
 
 
-      if (
-        !suspect
-      ) {
+      if (!suspect) {
 
         throw new Error(
           "AI가 사건의 정답을 지정하지 않았습니다."
@@ -3325,13 +3292,10 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
       }
 
 
-      /*
-       * 최종 사건 데이터
-       */
-
       const result = {
 
-        ok: true,
+        ok:
+          true,
 
         brief,
 
@@ -3359,6 +3323,16 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
 
       console.log(
         "🕵️ 사건 생성 완료"
+      );
+
+      console.log(
+        "난이도:",
+        finalDifficulty
+      );
+
+      console.log(
+        "사건 유형:",
+        finalCaseType
       );
 
       console.log(
@@ -3397,7 +3371,8 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
 
       return res.status(500).json({
 
-        ok: false,
+        ok:
+          false,
 
         error:
           error.message ||
@@ -3409,6 +3384,7 @@ console.log("🔴 OpenAI 실제 응답:", aiText);
 
   }
 );
+
 
 /* =========================================================
    API 404
@@ -3487,11 +3463,18 @@ app.use(
 
 
 /* =========================================================
-   서버 실행
+   PostgreSQL 테스트
 ========================================================= */
+
 async function testDatabase() {
+
   try {
-    const result = await pool.query("SELECT NOW()");
+
+    const result =
+      await pool.query(
+        "SELECT NOW()"
+      );
+
 
     console.log(
       "✅ PostgreSQL 연결 성공:",
@@ -3506,10 +3489,18 @@ async function testDatabase() {
     );
 
   }
+
 }
 
+
+/* =========================================================
+   PostgreSQL 테이블 생성
+========================================================= */
+
 async function initDatabase() {
+
   try {
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS chzzk_accounts (
         channel_id TEXT PRIMARY KEY,
@@ -3520,81 +3511,128 @@ async function initDatabase() {
       )
     `);
 
-    console.log("✅ PostgreSQL 테이블 준비 완료");
+
+    console.log(
+      "✅ PostgreSQL 테이블 준비 완료"
+    );
+
   } catch (error) {
+
     console.error(
       "❌ PostgreSQL 테이블 생성 실패:",
       error.message
     );
+
   }
+
 }
 
-app.listen(
-  PORT,
-  "0.0.0.0",
-  async() => {
 
-    console.log("");
+/* =========================================================
+   저장된 계정 복구
+========================================================= */
 
-     await testDatabase();
-   await initDatabase();
-await restoreSavedAccounts();
-    
-    async function restoreSavedAccounts() {
+async function restoreSavedAccounts() {
+
   try {
-    const result = await pool.query(`
-      SELECT
-        channel_id,
-        user_data,
-        access_token,
-        refresh_token
-      FROM chzzk_accounts
-    `);
+
+    const result =
+      await pool.query(`
+        SELECT
+          channel_id,
+          user_data,
+          access_token,
+          refresh_token
+        FROM chzzk_accounts
+      `);
+
 
     console.log(
       `🔄 저장된 치지직 계정 ${result.rows.length}개 복구 시작`
     );
 
-    for (const account of result.rows) {
-      try {
-        const channelId = account.channel_id;
-        const accessToken = account.access_token;
 
-        if (!channelId || !accessToken) {
+    for (
+      const account
+      of result.rows
+    ) {
+
+      try {
+
+        const channelId =
+          account.channel_id;
+
+
+        const accessToken =
+          account.access_token;
+
+
+        if (
+          !channelId ||
+          !accessToken
+        ) {
+
           console.log(
             "⚠️ 저장된 계정 정보가 부족해서 건너뜀:",
             channelId
           );
+
           continue;
+
         }
 
+
         /*
-         * 서버 메모리에 복구
+         * 서버 메모리 복구
          */
 
-        chatHistories.set(
-          channelId,
-          []
-        );
+        if (
+          !chatHistories.has(
+            channelId
+          )
+        ) {
+
+          chatHistories.set(
+            channelId,
+            []
+          );
+
+        }
+
 
         /*
-         * 자동 방송 감시 시작
+         * 세션 역할을 하는 가짜 request
          */
 
         const fakeReq = {
+
           session: {
+
             channelId,
+
             accessToken,
+
             refreshToken:
-              account.refresh_token || null,
+              account.refresh_token ||
+              null,
+
             user:
-              account.user_data || null
+              account.user_data ||
+              null
+
           }
+
         };
+
+
+        /*
+         * 방송 자동 감시 시작
+         */
 
         await startLiveWatcher(
           fakeReq
         );
+
 
         console.log(
           "✅ 저장된 계정 자동 감시 복구:",
@@ -3610,7 +3648,9 @@ await restoreSavedAccounts();
         );
 
       }
+
     }
+
 
     console.log(
       "🔄 저장된 계정 복구 완료"
@@ -3624,7 +3664,27 @@ await restoreSavedAccounts();
     );
 
   }
+
 }
+
+
+/* =========================================================
+   서버 실행
+========================================================= */
+
+app.listen(
+  PORT,
+  "0.0.0.0",
+  async () => {
+
+    console.log("");
+
+    await testDatabase();
+
+    await initDatabase();
+
+    await restoreSavedAccounts();
+
 
     console.log(
       "================================="
@@ -3652,8 +3712,13 @@ await restoreSavedAccounts();
     );
 
     console.log(
+      "🕵️ AI 사건 생성 API 활성화"
+    );
+
+    console.log(
       "================================="
     );
+
     console.log("");
 
   }

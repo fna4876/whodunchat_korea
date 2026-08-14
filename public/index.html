@@ -60,6 +60,10 @@ button:disabled{
     );
 }
 
+/* =========================================================
+   HEADER
+========================================================= */
+
 .header{
   height:70px;
   border-bottom:1px solid #292929;
@@ -103,6 +107,10 @@ button:disabled{
   border-radius:5px;
 }
 
+/* =========================================================
+   CONTAINER
+========================================================= */
+
 .container{
   width:min(
     1100px,
@@ -111,6 +119,10 @@ button:disabled{
   margin:auto;
   padding:70px 0;
 }
+
+/* =========================================================
+   HERO
+========================================================= */
 
 .hero{
   text-align:center;
@@ -165,6 +177,10 @@ button:disabled{
   background:#20ee80;
 }
 
+/* =========================================================
+   CARD
+========================================================= */
+
 .card{
   border:1px solid #292929;
   background:#0e0e0e;
@@ -194,6 +210,10 @@ button:disabled{
   padding:20px;
 }
 
+/* =========================================================
+   CHANNEL
+========================================================= */
+
 .channel{
   display:grid;
   grid-template-columns:1fr auto;
@@ -221,6 +241,10 @@ button:disabled{
   font-weight:900;
 }
 
+/* =========================================================
+   SECTION
+========================================================= */
+
 .section{
   margin-top:25px;
 }
@@ -232,6 +256,90 @@ button:disabled{
   font-weight:900;
   letter-spacing:2px;
 }
+
+/* =========================================================
+   CASE SETTINGS
+========================================================= */
+
+.case-settings{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.setting-box{
+  border:1px solid #292929;
+  background:#0d0d0d;
+  border-radius:7px;
+  padding:20px;
+}
+
+.setting-label{
+  font-size:11px;
+  color:#777;
+  font-weight:900;
+  letter-spacing:1px;
+  margin-bottom:14px;
+}
+
+.setting-options{
+  display:grid;
+  grid-template-columns:
+    repeat(3,1fr);
+  gap:8px;
+}
+
+.setting-options.types{
+  grid-template-columns:
+    repeat(3,1fr);
+}
+
+.option{
+  border:1px solid #333;
+  background:#111;
+  color:#aaa;
+  min-height:60px;
+  padding:10px 7px;
+  border-radius:5px;
+  font-weight:800;
+  font-size:12px;
+  transition:.15s;
+}
+
+.option:hover{
+  border-color:#555;
+  color:#fff;
+}
+
+.option.active{
+  border-color:#00d564;
+  background:#10351f;
+  color:#70ffad;
+  box-shadow:
+    0 0 0 1px #00d564 inset;
+}
+
+.option-title{
+  display:block;
+  font-size:13px;
+  color:inherit;
+}
+
+.option-description{
+  display:block;
+  margin-top:5px;
+  color:#666;
+  font-size:9px;
+  font-weight:400;
+}
+
+.option.active .option-description{
+  color:#62bc88;
+}
+
+/* =========================================================
+   OLD MODES
+========================================================= */
 
 .modes{
   display:grid;
@@ -271,6 +379,10 @@ button:disabled{
   font-size:11px;
   line-height:1.6;
 }
+
+/* =========================================================
+   LIVE
+========================================================= */
 
 .live-control{
   display:flex;
@@ -324,6 +436,42 @@ button:disabled{
   color:#ccc;
 }
 
+/* =========================================================
+   GENERATE BUTTON
+========================================================= */
+
+.generate-info{
+  margin-top:12px;
+  color:#666;
+  font-size:11px;
+  line-height:1.7;
+}
+
+.selected-summary{
+  margin-top:12px;
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+}
+
+.selected-tag{
+  border:1px solid #333;
+  background:#111;
+  color:#aaa;
+  padding:6px 9px;
+  border-radius:4px;
+  font-size:10px;
+  font-weight:800;
+}
+
+.selected-tag span{
+  color:#00d564;
+}
+
+/* =========================================================
+   GAME
+========================================================= */
+
 .game{
   padding-top:35px;
 }
@@ -333,6 +481,13 @@ button:disabled{
   justify-content:space-between;
   align-items:center;
   margin-bottom:20px;
+  gap:10px;
+}
+
+.game-top-left{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
 }
 
 .tag{
@@ -343,6 +498,12 @@ button:disabled{
   color:#aaa;
   font-size:10px;
   font-weight:900;
+}
+
+.tag.green{
+  color:#70ffad;
+  border-color:#176b3d;
+  background:#0d2417;
 }
 
 .game-title{
@@ -357,6 +518,10 @@ button:disabled{
   line-height:1.8;
   margin:12px 0 25px;
 }
+
+/* =========================================================
+   EVIDENCE
+========================================================= */
 
 .evidence-grid{
   display:grid;
@@ -386,6 +551,10 @@ button:disabled{
   line-height:1.8;
 }
 
+/* =========================================================
+   SUSPECTS
+========================================================= */
+
 .suspect-title{
   margin:28px 0 12px;
   font-size:12px;
@@ -411,6 +580,10 @@ button:disabled{
   text-align:center;
 }
 
+.suspect:hover{
+  border-color:#666;
+}
+
 .suspect.correct{
   background:#10351f;
   border-color:#00d564;
@@ -422,6 +595,10 @@ button:disabled{
   border-color:#ff5b5b;
   color:#ff9292;
 }
+
+/* =========================================================
+   RESULT
+========================================================= */
 
 .result{
   margin-top:15px;
@@ -441,6 +618,10 @@ button:disabled{
   border-color:#ff5b5b;
 }
 
+/* =========================================================
+   BACK
+========================================================= */
+
 .back{
   width:100%;
   margin-top:12px;
@@ -451,6 +632,10 @@ button:disabled{
   border-radius:5px;
 }
 
+/* =========================================================
+   NOTICE
+========================================================= */
+
 .notice{
   text-align:center;
   color:#555;
@@ -458,6 +643,10 @@ button:disabled{
   line-height:1.7;
   margin-top:25px;
 }
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
 
 @media(max-width:800px){
 
@@ -469,6 +658,10 @@ button:disabled{
   .suspects{
     grid-template-columns:
       1fr 1fr;
+  }
+
+  .case-settings{
+    grid-template-columns:1fr;
   }
 
 }
@@ -509,6 +702,16 @@ button:disabled{
 
   .game-title{
     font-size:34px;
+  }
+
+  .setting-options,
+  .setting-options.types{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .game-top{
+    align-items:flex-start;
+    flex-direction:column;
   }
 
 }
@@ -587,7 +790,9 @@ button:disabled{
 </div>
 
 
-<!-- 채널 -->
+<!-- =====================================================
+     채널
+===================================================== -->
 
 <div class="card">
 
@@ -642,16 +847,239 @@ button:disabled{
 </div>
 
 
-<!-- 사건 모드 -->
+<!-- =====================================================
+     사건 설정
+===================================================== -->
 
 <div class="section">
 
   <div class="section-title">
-    사건 선택
+    사건 설정
+  </div>
+
+
+  <div class="case-settings">
+
+
+    <!-- 난이도 -->
+
+    <div class="setting-box">
+
+      <div class="setting-label">
+        난이도
+      </div>
+
+
+      <div class="setting-options">
+
+
+        <button
+          class="option active"
+          data-difficulty="easy"
+        >
+
+          <span class="option-title">
+            쉬움
+          </span>
+
+          <span class="option-description">
+            단서가 비교적 명확합니다
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-difficulty="normal"
+        >
+
+          <span class="option-title">
+            보통
+          </span>
+
+          <span class="option-description">
+            단서를 조합해야 합니다
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-difficulty="hard"
+        >
+
+          <span class="option-title">
+            어려움
+          </span>
+
+          <span class="option-description">
+            숨겨진 단서를 찾아야 합니다
+          </span>
+
+        </button>
+
+
+      </div>
+
+    </div>
+
+
+    <!-- 유형 -->
+
+    <div class="setting-box">
+
+      <div class="setting-label">
+        사건 유형
+      </div>
+
+
+      <div class="setting-options types">
+
+
+        <button
+          class="option active"
+          data-case-type="random"
+        >
+
+          <span class="option-title">
+            랜덤
+          </span>
+
+          <span class="option-description">
+            AI가 자유롭게 선택
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-case-type="theft"
+        >
+
+          <span class="option-title">
+            절도
+          </span>
+
+          <span class="option-description">
+            물건이 사라진 사건
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-case-type="missing"
+        >
+
+          <span class="option-title">
+            실종
+          </span>
+
+          <span class="option-description">
+            누군가 사라진 사건
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-case-type="betrayal"
+        >
+
+          <span class="option-title">
+            배신
+          </span>
+
+          <span class="option-description">
+            숨겨진 관계와 거짓말
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-case-type="secret"
+        >
+
+          <span class="option-title">
+            비밀
+          </span>
+
+          <span class="option-description">
+            숨겨진 진실을 추적
+          </span>
+
+        </button>
+
+
+        <button
+          class="option"
+          data-case-type="mystery"
+        >
+
+          <span class="option-title">
+            미스터리
+          </span>
+
+          <span class="option-description">
+            복잡한 단서를 추리
+          </span>
+
+        </button>
+
+
+      </div>
+
+    </div>
+
+
+  </div>
+
+
+  <div
+    id="selectedSummary"
+    class="selected-summary"
+  >
+
+    <div class="selected-tag">
+      난이도:
+      <span id="selectedDifficulty">
+        쉬움
+      </span>
+    </div>
+
+
+    <div class="selected-tag">
+      유형:
+      <span id="selectedType">
+        랜덤
+      </span>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     사건 모드
+===================================================== -->
+
+<div class="section">
+
+  <div class="section-title">
+    게임 모드
   </div>
 
 
   <div class="modes">
+
 
     <div class="mode active">
 
@@ -720,12 +1148,15 @@ button:disabled{
 
     </div>
 
+
   </div>
 
 </div>
 
 
-<!-- 실시간 채팅 -->
+<!-- =====================================================
+     실시간 채팅
+===================================================== -->
 
 <div class="section">
 
@@ -824,6 +1255,12 @@ button:disabled{
 </button>
 
 
+<div class="generate-info">
+  선택한 난이도와 사건 유형을 바탕으로 AI가 채팅에서 단서를 찾아
+  새로운 추리 사건을 생성합니다.
+</div>
+
+
 <div class="notice">
 
   후던챗의 사건은 실제 인물을 범죄자로 지목하지 않는<br>
@@ -835,18 +1272,42 @@ button:disabled{
 </section>
 
 
-<!-- 게임 -->
+<!-- =====================================================
+     GAME
+===================================================== -->
 
 <section
   id="game"
   class="game hidden"
 >
 
+
   <div class="game-top">
 
-    <span class="tag">
-      최고 수배 사건
-    </span>
+
+    <div class="game-top-left">
+
+      <span class="tag">
+        최고 수배 사건
+      </span>
+
+
+      <span
+        id="gameDifficulty"
+        class="tag green"
+      >
+        쉬움
+      </span>
+
+
+      <span
+        id="gameType"
+        class="tag"
+      >
+        랜덤
+      </span>
+
+    </div>
 
 
     <span
@@ -855,6 +1316,7 @@ button:disabled{
     >
       용의자 0명
     </span>
+
 
   </div>
 
@@ -910,6 +1372,7 @@ button:disabled{
     사건 목록으로 돌아가기
   </button>
 
+
 </section>
 
 
@@ -920,7 +1383,6 @@ button:disabled{
 
 <script>
 
-
 /* =========================================================
    상태
 ========================================================= */
@@ -930,6 +1392,158 @@ let messages = [];
 let polling = null;
 
 let loggedIn = false;
+
+
+/* =========================================================
+   사건 설정
+========================================================= */
+
+let selectedDifficulty = "easy";
+
+let selectedCaseType = "random";
+
+
+const difficultyNames = {
+
+  easy:
+    "쉬움",
+
+  normal:
+    "보통",
+
+  hard:
+    "어려움"
+
+};
+
+
+const caseTypeNames = {
+
+  random:
+    "랜덤",
+
+  theft:
+    "절도",
+
+  missing:
+    "실종",
+
+  betrayal:
+    "배신",
+
+  secret:
+    "비밀",
+
+  mystery:
+    "미스터리"
+
+};
+
+
+/* =========================================================
+   난이도 선택
+========================================================= */
+
+document
+  .querySelectorAll(
+    "[data-difficulty]"
+  )
+  .forEach(
+    button => {
+
+      button.onclick =
+        () => {
+
+          document
+            .querySelectorAll(
+              "[data-difficulty]"
+            )
+            .forEach(
+              item => {
+
+                item.classList.remove(
+                  "active"
+                );
+
+              }
+            );
+
+
+          button.classList.add(
+            "active"
+          );
+
+
+          selectedDifficulty =
+            button.dataset.difficulty;
+
+
+          document
+            .getElementById(
+              "selectedDifficulty"
+            )
+            .textContent =
+              difficultyNames[
+                selectedDifficulty
+              ];
+
+        };
+
+    }
+  );
+
+
+/* =========================================================
+   사건 유형 선택
+========================================================= */
+
+document
+  .querySelectorAll(
+    "[data-case-type]"
+  )
+  .forEach(
+    button => {
+
+      button.onclick =
+        () => {
+
+          document
+            .querySelectorAll(
+              "[data-case-type]"
+            )
+            .forEach(
+              item => {
+
+                item.classList.remove(
+                  "active"
+                );
+
+              }
+            );
+
+
+          button.classList.add(
+            "active"
+          );
+
+
+          selectedCaseType =
+            button.dataset.caseType;
+
+
+          document
+            .getElementById(
+              "selectedType"
+            )
+            .textContent =
+              caseTypeNames[
+                selectedCaseType
+              ];
+
+        };
+
+    }
+  );
 
 
 /* =========================================================
@@ -1121,6 +1735,7 @@ async function checkLiveStatus(){
         )
         .textContent =
           "🔴 방송 중입니다. 실시간 채팅을 수집하고 있습니다.";
+
 
       startPolling();
 
@@ -1587,7 +2202,8 @@ async () => {
         "liveStatus"
       )
       .textContent =
-        `저장된 채팅 ${messages.length}개를 불러왔습니다.`;
+      `저장된 채팅 ${messages.length}개를 불러왔습니다.`;
+
 
   } catch(error) {
 
@@ -1736,6 +2352,11 @@ async () => {
       "사건을 분석하고 있습니다...";
 
 
+    /*
+      중요:
+      여기서 난이도와 사건 유형을 서버로 함께 보낸다.
+    */
+
     const response =
       await fetch(
         "/api/case",
@@ -1757,7 +2378,13 @@ async () => {
           body:
             JSON.stringify({
 
-              messages
+              messages,
+
+              difficulty:
+                selectedDifficulty,
+
+              caseType:
+                selectedCaseType
 
             })
 
@@ -1777,6 +2404,21 @@ async () => {
       );
 
     }
+
+
+    /*
+      서버에서 반환하지 않는 경우를 대비해서
+      현재 선택값도 화면에 표시한다.
+    */
+
+    data.difficulty =
+      data.difficulty ||
+      selectedDifficulty;
+
+
+    data.caseType =
+      data.caseType ||
+      selectedCaseType;
 
 
     renderCase(
@@ -1801,9 +2443,12 @@ async () => {
 
 
     window.scrollTo({
+
       top:0,
+
       behavior:
         "smooth"
+
     });
 
 
@@ -1846,12 +2491,44 @@ function renderCase(
     [];
 
 
+  const difficulty =
+    data.difficulty ||
+    selectedDifficulty;
+
+
+  const caseType =
+    data.caseType ||
+    selectedCaseType;
+
+
   document
     .getElementById(
       "count"
     )
     .textContent =
       `용의자 ${suspects.length}명`;
+
+
+  document
+    .getElementById(
+      "gameDifficulty"
+    )
+    .textContent =
+      difficultyNames[
+        difficulty
+      ] ||
+      difficulty;
+
+
+  document
+    .getElementById(
+      "gameType"
+    )
+    .textContent =
+      caseTypeNames[
+        caseType
+      ] ||
+      caseType;
 
 
   document
@@ -2057,10 +2734,21 @@ document
       .remove("hidden");
 
 
+    document
+      .getElementById(
+        "result"
+      )
+      .classList
+      .add("hidden");
+
+
     window.scrollTo({
+
       top:0,
+
       behavior:
         "smooth"
+
     });
 
   };
