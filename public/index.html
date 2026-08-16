@@ -1148,6 +1148,101 @@ button:disabled{
 
 }
 
+/* =========================================================
+   RESULT INVESTIGATION
+========================================================= */
+
+.result-answer-main{
+  margin-bottom:18px;
+}
+
+.culprit-reason,
+.result-reason{
+  margin-top:16px;
+  padding:16px;
+  background:#0b0b0b;
+  border:1px solid #292929;
+  border-radius:7px;
+  text-align:left;
+}
+
+.culprit-reason-title,
+.result-reason-title{
+  color:#70ffad;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:12px;
+  letter-spacing:.5px;
+}
+
+.culprit-reason-list{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.culprit-reason-item{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  color:#ccc;
+  font-size:12px;
+  line-height:1.7;
+}
+
+.reason-number{
+  flex:0 0 23px;
+  width:23px;
+  height:23px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:#10351f;
+  border:1px solid #00d564;
+  color:#70ffad;
+  font-size:10px;
+  font-weight:950;
+}
+
+.culprit-conclusion{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid #252525;
+  color:#aaa;
+  font-size:12px;
+  line-height:1.8;
+}
+
+.culprit-conclusion strong{
+  color:#fff;
+  margin-right:6px;
+}
+
+.result-reason-content{
+  color:#aaa;
+  font-size:12px;
+  line-height:1.8;
+}
+
+.result-reason-content strong{
+  color:#eee;
+}
+
+@media(max-width:600px){
+
+  .culprit-reason,
+  .result-reason{
+    padding:14px;
+  }
+
+  .culprit-reason-item,
+  .result-reason-content{
+    font-size:11px;
+  }
+
+}
+
 </style>
 
 </head>
@@ -1952,6 +2047,81 @@ button:disabled{
       >
       </div>
 
+      <div
+  id="resultInvestigation"
+  class="result-investigation hidden"
+>
+
+  <div class="result-section">
+
+    <div class="result-section-title">
+      🔎 범인이었던 이유
+    </div>
+
+    <div
+      id="culpritReason"
+      class="result-section-content"
+    ></div>
+
+  </div>
+
+
+  <div class="result-section">
+
+    <div class="result-section-title">
+      🧩 핵심 증거
+    </div>
+
+    <div
+      id="resultEvidenceLinks"
+      class="result-section-content"
+    ></div>
+
+  </div>
+
+
+  <div class="result-section">
+
+    <div class="result-section-title">
+      🧠 추리 과정
+    </div>
+
+    <div
+      id="deduction"
+      class="result-section-content"
+    ></div>
+
+  </div>
+
+
+  <div class="result-section">
+
+    <div class="result-section-title">
+      ⚡ 결정적 단서
+    </div>
+
+    <div
+      id="finalClue"
+      class="result-section-content"
+    ></div>
+
+  </div>
+
+
+  <div class="result-section">
+
+    <div class="result-section-title">
+      👤 용의자별 의심 이유
+    </div>
+
+    <div
+      id="suspectReasons"
+      class="result-section-content"
+    ></div>
+
+  </div>
+
+</div>
 
       <button
         id="resultClose"
@@ -1993,6 +2163,7 @@ let polling = null;
 
 let loggedIn = false;
 
+let currentCase = null;
 
 /* =========================================================
    사건 설정
@@ -3076,6 +3247,8 @@ function renderCase(
   data
 ){
 
+    currentCase = data;
+
   const suspects =
     data.suspects ||
     [];
@@ -3141,7 +3314,7 @@ function renderCase(
     .innerHTML =
 
       (data.exhibits || [])
-        .slice(0,6)
+        .slice(0, 6)
         .map(
           (
             item,
@@ -3164,9 +3337,26 @@ function renderCase(
               </div>
 
               <div class="evidence-text">
-                ${escapeHtml(
-                  item.text
-                )}
+
+                <div class="evidence-main">
+                  ${escapeHtml(
+                    item.text
+                  )}
+                </div>
+
+                ${
+                  item.importance
+                    ? `
+                      <div class="evidence-importance">
+                        <span>WHY</span>
+                        ${escapeHtml(
+                          item.importance
+                        )}
+                      </div>
+                    `
+                    : ""
+                }
+
               </div>
 
             </div>
@@ -3196,10 +3386,17 @@ function renderCase(
                 name
               )}"
             >
-              👤
-              ${escapeHtml(
-                name
-              )}
+
+              <span class="suspect-icon">
+                👤
+              </span>
+
+              <span>
+                ${escapeHtml(
+                  name
+                )}
+              </span>
+
             </button>
 
           `
@@ -3253,7 +3450,8 @@ function renderCase(
 
               showResult(
                 true,
-                data.suspect
+                data.suspect,
+                data
               );
 
             } else {
@@ -3263,9 +3461,19 @@ function renderCase(
               );
 
 
+              /*
+               * 오답을 골라도
+               * 다른 용의자의 버튼에서
+               * 정답을 바로 보여주지 않는다.
+               *
+               * 결과 화면에서만 진범과
+               * 추리 근거를 공개한다.
+               */
+
               showResult(
                 false,
-                data.suspect
+                data.suspect,
+                data
               );
 
             }
@@ -3282,9 +3490,14 @@ function renderCase(
    결과 표시
 ========================================================= */
 
+/* =========================================================
+   결과 표시
+========================================================= */
+
 function showResult(
   success,
-  answer
+  answer,
+  data
 ){
 
   const overlay =
@@ -3292,36 +3505,30 @@ function showResult(
       "resultOverlay"
     );
 
-
   const modal =
     document.getElementById(
       "resultModal"
     );
-
 
   const icon =
     document.getElementById(
       "resultIcon"
     );
 
-
   const kicker =
     document.getElementById(
       "resultKicker"
     );
-
 
   const title =
     document.getElementById(
       "resultTitle"
     );
 
-
   const description =
     document.getElementById(
       "resultDescription"
     );
-
 
   const answerBox =
     document.getElementById(
@@ -3329,11 +3536,21 @@ function showResult(
     );
 
 
+  /* 현재 사건 저장 */
+
+  currentCase =
+    data || currentCase || {};
+
+
+  /* 결과창 스타일 */
+
   modal.className =
     success
       ? "result-modal success"
       : "result-modal fail";
 
+
+  /* 성공 / 실패 */
 
   if (success) {
 
@@ -3347,15 +3564,7 @@ function showResult(
       "사건 해결!";
 
     description.textContent =
-      "정확하게 범인을 찾아냈습니다.";
-
-    answerBox.innerHTML = `
-      범인은
-      <strong>
-        ${escapeHtml(answer)}
-      </strong>
-      입니다.
-    `;
+      "증거를 정확하게 분석했습니다.";
 
   } else {
 
@@ -3369,22 +3578,328 @@ function showResult(
       "수사 실패";
 
     description.textContent =
-      "선택한 용의자가 범인이 아닙니다. 증거를 다시 살펴보세요.";
-
-    answerBox.innerHTML = `
-      진짜 범인은
-      <strong>
-        ${escapeHtml(answer)}
-      </strong>
-      입니다.
-    `;
+      "범인을 잘못 선택했습니다.";
 
   }
 
 
+  /* =====================================================
+     범인 + 추리 결과
+  ===================================================== */
+
+  const reasons =
+    Array.isArray(
+      currentCase.culpritReason
+    )
+      ? currentCase.culpritReason
+      : [];
+
+
+  const conclusion =
+    currentCase.conclusion ||
+    "";
+
+
+  const evidenceLinks =
+    Array.isArray(
+      currentCase.resultEvidenceLinks
+    )
+      ? currentCase.resultEvidenceLinks
+      : [];
+
+
+  const deduction =
+    currentCase.deduction ||
+    "";
+
+
+  const finalClue =
+    currentCase.finalClue ||
+    "";
+
+
+  const suspectReasons =
+    currentCase.suspectReasons ||
+    {};
+
+
+  answerBox.innerHTML = `
+
+    <div class="result-answer-main">
+
+      범인은
+      <strong>
+        ${escapeHtml(answer)}
+      </strong>
+      입니다.
+
+    </div>
+
+
+    ${
+      reasons.length
+        ? `
+
+          <div class="culprit-reason">
+
+            <div class="culprit-reason-title">
+              🔎 범인이었던 이유
+            </div>
+
+
+            <div class="culprit-reason-list">
+
+              ${
+                reasons
+                  .map(
+                    (reason, index) => `
+
+                      <div
+                        class="culprit-reason-item"
+                      >
+
+                        <span
+                          class="reason-number"
+                        >
+                          ${index + 1}
+                        </span>
+
+
+                        <span>
+                          ${escapeHtml(reason)}
+                        </span>
+
+                      </div>
+
+                    `
+                  )
+                  .join("")
+              }
+
+            </div>
+
+
+            ${
+              conclusion
+                ? `
+
+                  <div class="culprit-conclusion">
+
+                    <strong>
+                      결론
+                    </strong>
+
+                    ${escapeHtml(
+                      conclusion
+                    )}
+
+                  </div>
+
+                `
+                : ""
+            }
+
+          </div>
+
+        `
+        : ""
+    }
+
+
+    ${
+      evidenceLinks.length
+        ? `
+
+          <div class="result-reason">
+
+            <div class="result-reason-title">
+              🧩 핵심 증거
+            </div>
+
+
+            <div class="result-reason-content">
+
+              ${
+                evidenceLinks
+                  .map(
+                    (item, index) => `
+
+                      <div>
+                        ①${index + 1}
+                        ${escapeHtml(item)}
+                      </div>
+
+                    `
+                  )
+                  .join("")
+              }
+
+            </div>
+
+          </div>
+
+        `
+        : ""
+    }
+
+
+    ${
+      deduction
+        ? `
+
+          <div class="result-reason">
+
+            <div class="result-reason-title">
+              🧠 추리 과정
+            </div>
+
+
+            <div class="result-reason-content">
+
+              ${escapeHtml(
+                deduction
+              )}
+
+            </div>
+
+          </div>
+
+        `
+        : ""
+    }
+
+
+    ${
+      finalClue
+        ? `
+
+          <div class="result-reason">
+
+            <div class="result-reason-title">
+              ⚡ 결정적 단서
+            </div>
+
+
+            <div class="result-reason-content">
+
+              ${escapeHtml(
+                finalClue
+              )}
+
+            </div>
+
+          </div>
+
+        `
+        : ""
+    }
+
+
+    ${
+      Object.keys(
+        suspectReasons
+      ).length
+        ? `
+
+          <div class="result-reason">
+
+            <div class="result-reason-title">
+              👤 용의자별 의심 이유
+            </div>
+
+
+            <div class="result-reason-content">
+
+              ${
+                Object.entries(
+                  suspectReasons
+                )
+                .map(
+                  ([name, reason]) => `
+
+                    <div
+                      style="
+                        margin-bottom:8px;
+                      "
+                    >
+
+                      <strong>
+                        ${escapeHtml(name)}
+                      </strong>
+
+                      :
+                      ${escapeHtml(reason)}
+
+                    </div>
+
+                  `
+                )
+                .join("")
+              }
+
+            </div>
+
+          </div>
+
+        `
+        : ""
+    }
+
+  `;
+
+
+  /* 결과창 표시 */
+
   overlay.classList.remove(
     "hidden"
   );
+
+
+  /* 결과창 위쪽으로 이동 */
+
+  const modalBody =
+    modal.querySelector(
+      ".result-content"
+    );
+
+
+  if (modalBody) {
+
+    modalBody.scrollTop =
+      0;
+
+  }
+
+}
+
+
+/* =========================================================
+   사건 데이터에서 용의자 목록 가져오기
+========================================================= */
+
+function suspectsFromData(
+  data
+){
+
+  if (
+    Array.isArray(
+      data?.suspects
+    )
+  ) {
+
+    return data.suspects
+      .map(
+        name =>
+          String(
+            name || ""
+          ).trim()
+      )
+      .filter(Boolean);
+
+  }
+
+
+  return [];
 
 }
 
@@ -3405,7 +3920,9 @@ document
         "resultOverlay"
       )
       .classList
-      .add("hidden");
+      .add(
+        "hidden"
+      );
 
   };
 
@@ -3428,7 +3945,9 @@ document
 
       event.currentTarget
         .classList
-        .add("hidden");
+        .add(
+          "hidden"
+        );
 
     }
 
@@ -3453,7 +3972,9 @@ document.addEventListener(
           "resultOverlay"
         )
         .classList
-        .add("hidden");
+        .add(
+          "hidden"
+        );
 
     }
 
@@ -3477,7 +3998,9 @@ document
         "game"
       )
       .classList
-      .add("hidden");
+      .add(
+        "hidden"
+      );
 
 
     document
@@ -3485,7 +4008,9 @@ document
         "home"
       )
       .classList
-      .remove("hidden");
+      .remove(
+        "hidden"
+      );
 
 
     document
@@ -3493,12 +4018,15 @@ document
         "resultOverlay"
       )
       .classList
-      .add("hidden");
+      .add(
+        "hidden"
+      );
 
 
     window.scrollTo({
 
-      top:0,
+      top:
+        0,
 
       behavior:
         "smooth"
@@ -3560,7 +4088,3 @@ function escapeHtml(
 checkLogin();
 
 </script>
-
-</body>
-
-</html>
