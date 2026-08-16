@@ -2888,22 +2888,17 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
 
             },
 
-            body:
-              JSON.stringify({
+            body: JSON.stringify({
 
-                model:
-                  process.env.OPENAI_MODEL ||
-                  "gpt-4o-mini",
+  model:
+    process.env.OPENAI_MODEL ||
+    "gpt-5-mini",
 
-                response_format: {
-                  type:
-                    "json_object"
-                },
+  response_format: {
+    type: "json_object"
+  },
 
-                temperature:
-                  0.4,
-
-                messages: [
+  messages: [
 
                   {
                     role:
