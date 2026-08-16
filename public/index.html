@@ -125,14 +125,18 @@ button:disabled{
 ========================================================= */
 
 .container{
-  width:min(
-    1100px,
-    calc(100% - 32px)
-  );
-  margin:auto;
+  width:min(1100px, calc(100% - 32px));
+  margin:0 auto;
   padding:70px 0;
 }
 
+.container > section{
+  width:100%;
+}
+
+#home{
+  width:100%;
+}
 
 /* =========================================================
    HERO
@@ -360,40 +364,47 @@ button:disabled{
    OLD MODES
 ========================================================= */
 
+/* =========================================================
+   GAME MODES
+========================================================= */
+
 .modes{
   display:grid;
-  grid-template-columns:
-    repeat(2,1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:10px;
+  width:100%;
 }
 
 .mode{
+  width:100%;
+  min-height:130px;
+  padding:18px;
+
+  border:1px solid #292929;
+  background:#0d0d0d;
+  color:#f5f5f5;
+
+  border-radius:7px;
   cursor:pointer;
-  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
+
+  transition:
+    transform .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    background .15s ease;
 }
 
 .mode:hover{
   transform:translateY(-2px);
-  border-color:#888;
+  border-color:#555;
+  background:#111;
 }
 
 .mode.selected{
   border-color:#00d564;
-  box-shadow:0 0 0 1px #00d564 inset;
-}
-
-.mode{
-  min-height:130px;
-  padding:18px;
-  border:1px solid #888;
-  background:#888;
-  border-radius:7px;
-}
-
-.mode.active{
-  border-color:#00d564;
   box-shadow:
     0 0 0 1px #00d564 inset;
+  background:#0d0d0d;
 }
 
 .mode-number{
@@ -405,6 +416,7 @@ button:disabled{
 .mode h3{
   margin:22px 0 7px;
   font-size:17px;
+  color:#f5f5f5;
 }
 
 .mode p{
@@ -413,7 +425,6 @@ button:disabled{
   font-size:11px;
   line-height:1.6;
 }
-
 
 /* =========================================================
    LIVE CHAT
@@ -1524,52 +1535,67 @@ button:disabled{
   </div>
 
 
-  <!-- ===================================================
-       MODES
-  =================================================== -->
+ <!-- ===================================================
+     GAME MODES
+=================================================== -->
 
-  <div class="section">
+<div class="section">
 
-    <div class="section-title">
-      게임 모드
-    </div>
+  <div class="section-title">
+    게임 모드
+  </div>
 
+  <div class="modes">
 
-    <div class="modes">
-
-      <button
-        type="button"
-        class="mode selected"
-        data-game-mode="today"
-      >
-        <div class="mode-number">01</div>
-        <h3>오늘의 사건</h3>
-        <p>현재 채팅에서 하나의 사건을 발견하고 바로 범인을 추리합니다.</p>
-      </button>
-
-      <button
-        type="button"
-        class="mode"
-        data-game-mode="unsolved"
-      >
-        <div class="mode-number">02</div>
-        <h3>미제 사건</h3>
-        <p>증거를 한 단계씩 확보하면서 여러 단서를 연결해 사건을 해결합니다.</p>
-      </button>
-
-    </div>
-
-    <div
-      id="gameModeInfo"
-      class="generate-info"
-      style="margin-top:12px;"
+    <button
+      type="button"
+      class="mode selected"
+      data-game-mode="today"
     >
-      오늘의 사건: 채팅을 한 번 분석해 사건을 생성하고 바로 범인을 지목합니다.
-    </div>
-    </div>
+      <div class="mode-number">
+        01
+      </div>
+
+      <h3>
+        오늘의 사건
+      </h3>
+
+      <p>
+        현재 채팅에서 하나의 사건을 발견하고 바로 범인을 추리합니다.
+      </p>
+    </button>
+
+
+    <button
+      type="button"
+      class="mode"
+      data-game-mode="unsolved"
+    >
+      <div class="mode-number">
+        02
+      </div>
+
+      <h3>
+        미제 사건
+      </h3>
+
+      <p>
+        증거를 한 단계씩 확보하면서 여러 단서를 연결해 사건을 해결합니다.
+      </p>
+    </button>
 
   </div>
 
+
+  <div
+    id="gameModeInfo"
+    class="generate-info"
+    style="margin-top:12px;"
+  >
+    오늘의 사건: 채팅을 한 번 분석해 사건을 생성하고 바로 범인을 지목합니다.
+  </div>
+
+</div>
 
   <!-- ===================================================
        LIVE CHAT
