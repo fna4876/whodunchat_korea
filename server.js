@@ -3065,24 +3065,73 @@ app.post(
       const channelId =
         getChannelId(req);
 
-      if (
-        !isContentActive(
-          channelId
-        )
-      ) {
+      /* =====================================================
+   후던챗 콘텐츠 자동 시작
+===================================================== */
 
-        return res.status(400).json({
+let content =
+  getContentSession(
+    channelId
+  );
 
-          ok: false,
+if (
+  !content?.active
+) {
 
-          error:
-            "후던챗 콘텐츠가 시작되지 않았습니다.",
+  /*
+   * 현재 방송 중인지 확인
+   */
+  const live =
+    await getCurrentLive(
+      channelId
+    );
 
-          code:
-            "CONTENT_NOT_ACTIVE"
+  if (!live) {
 
-        });
-      }
+    return res.status(400).json({
+
+      ok: false,
+
+      error:
+        "현재 방송 중이 아닙니다.",
+
+      code:
+        "NOT_LIVE"
+
+    });
+  }
+
+  /*
+   * 채팅 연결이 없으면 연결
+   */
+  let connection =
+    chatConnections.get(
+      channelId
+    );
+
+  if (
+    !connection?.collecting
+  ) {
+
+    connection =
+      await startChatCollection(
+        req
+      );
+  }
+
+  /*
+   * 콘텐츠 세션 자동 시작
+   */
+  content =
+    startContentSession(
+      channelId
+    );
+
+  console.log(
+    "🔎 사건 생성 요청으로 후던챗 콘텐츠 자동 시작:",
+    channelId
+  );
+}
 
       let messages =
         Array.isArray(
@@ -4099,17 +4148,12 @@ ${outputRules}
          을 사용할 수 있다.
       ===================================================== */
 
-      const content =
-        getContentSession(
-          channelId
-        );
-
       if (!content) {
 
-        throw new Error(
-          "콘텐츠 세션을 찾을 수 없습니다."
-        );
-      }
+  throw new Error(
+    "콘텐츠 세션을 찾을 수 없습니다."
+  );
+}
 
       content.startedCaseCount =
         Number(
