@@ -500,7 +500,6 @@ function startContentSession(
      */
     solved:
       false
-
   };
 
   contentSessions.set(
@@ -675,12 +674,6 @@ function getChatHistory(
    ★ 후던챗 채팅 답변
 ========================================================= */
 
-/*
- * 실제 치지직 채팅창으로 답변한다.
- *
- * chzzk-chat.js의 sendChat()을 사용한다.
- */
-
 async function sendBotMessage(
   channelId,
   message
@@ -742,11 +735,6 @@ async function sendBotMessage(
   }
 }
 
-
-/*
- * 치지직 채팅은 너무 길면 읽기 힘들기 때문에
- * 여러 메시지로 나눠서 전송한다.
- */
 
 async function sendBotMessages(
   channelId,
@@ -884,9 +872,6 @@ async function handleChatCommand(
     argument
   } = parsed;
 
-  /*
-   * 명령어가 아닌 슬래시 메시지는 무시
-   */
   const supportedCommands = new Set([
     "/사건",
     "/용의자",
@@ -1247,13 +1232,6 @@ async function handleChatCommand(
 
     content.solved =
       true;
-
-    /*
-     * 정답 공개 후에도 현재 사건 정보는
-     * API에서 확인할 수 있도록 유지한다.
-     *
-     * 다음 사건을 생성하면 자동으로 교체된다.
-     */
 
     return true;
   }
@@ -3053,6 +3031,7 @@ app.delete(
 
 /* =========================================================
    ★ AI 사건 생성
+   🔴 오늘의 사건만 사용
 ========================================================= */
 
 app.post(
@@ -3065,73 +3044,79 @@ app.post(
       const channelId =
         getChannelId(req);
 
+
       /* =====================================================
-   후던챗 콘텐츠 자동 시작
-===================================================== */
+         후던챗 콘텐츠 자동 시작
+      ===================================================== */
 
-let content =
-  getContentSession(
-    channelId
-  );
+      let content =
+        getContentSession(
+          channelId
+        );
 
-if (
-  !content?.active
-) {
+      if (
+        !content?.active
+      ) {
 
-  /*
-   * 현재 방송 중인지 확인
-   */
-  const live =
-    await getCurrentLive(
-      channelId
-    );
+        /*
+         * 현재 방송 중인지 확인
+         */
+        const live =
+          await getCurrentLive(
+            channelId
+          );
 
-  if (!live) {
+        if (!live) {
 
-    return res.status(400).json({
+          return res.status(400).json({
 
-      ok: false,
+            ok: false,
 
-      error:
-        "현재 방송 중이 아닙니다.",
+            error:
+              "현재 방송 중이 아닙니다.",
 
-      code:
-        "NOT_LIVE"
+            code:
+              "NOT_LIVE"
 
-    });
-  }
+          });
+        }
 
-  /*
-   * 채팅 연결이 없으면 연결
-   */
-  let connection =
-    chatConnections.get(
-      channelId
-    );
+        /*
+         * 채팅 연결이 없으면 연결
+         */
+        let connection =
+          chatConnections.get(
+            channelId
+          );
 
-  if (
-    !connection?.collecting
-  ) {
+        if (
+          !connection?.collecting
+        ) {
 
-    connection =
-      await startChatCollection(
-        req
-      );
-  }
+          connection =
+            await startChatCollection(
+              req
+            );
+        }
 
-  /*
-   * 콘텐츠 세션 자동 시작
-   */
-  content =
-    startContentSession(
-      channelId
-    );
+        /*
+         * 콘텐츠 세션 자동 시작
+         */
+        content =
+          startContentSession(
+            channelId
+          );
 
-  console.log(
-    "🔎 사건 생성 요청으로 후던챗 콘텐츠 자동 시작:",
-    channelId
-  );
-}
+        console.log(
+          "🔎 사건 생성 요청으로 후던챗 콘텐츠 자동 시작:",
+          channelId
+        );
+      }
+
+
+      /* =====================================================
+         채팅 가져오기
+      ===================================================== */
 
       let messages =
         Array.isArray(
@@ -3150,11 +3135,23 @@ if (
           );
       }
 
-      const mode =
-        String(
-          req.body?.mode ||
-          "today"
-        ).trim();
+
+      /* =====================================================
+         오늘의 사건
+      ===================================================== */
+
+      /*
+       * 미제 사건은 제거되었기 때문에
+       * mode는 항상 today로 처리한다.
+       */
+
+      const finalMode =
+        "today";
+
+
+      /* =====================================================
+         난이도
+      ===================================================== */
 
       const difficulty =
         String(
@@ -3162,22 +3159,29 @@ if (
           "normal"
         ).trim();
 
-      const caseType =
-        String(
-          req.body?.caseType ||
-          "random"
-        ).trim();
-
-      const allowedModes = [
-        "today",
-        "unsolved"
-      ];
-
       const allowedDifficulties = [
         "easy",
         "normal",
         "hard"
       ];
+
+      const finalDifficulty =
+        allowedDifficulties.includes(
+          difficulty
+        )
+          ? difficulty
+          : "normal";
+
+
+      /* =====================================================
+         사건 유형
+      ===================================================== */
+
+      const caseType =
+        String(
+          req.body?.caseType ||
+          "random"
+        ).trim();
 
       const allowedCaseTypes = [
         "random",
@@ -3191,26 +3195,17 @@ if (
         "mystery"
       ];
 
-      const finalMode =
-        allowedModes.includes(
-          mode
-        )
-          ? mode
-          : "today";
-
-      const finalDifficulty =
-        allowedDifficulties.includes(
-          difficulty
-        )
-          ? difficulty
-          : "normal";
-
       const finalCaseType =
         allowedCaseTypes.includes(
           caseType
         )
           ? caseType
           : "random";
+
+
+      /* =====================================================
+         최소 채팅 수
+      ===================================================== */
 
       if (
         messages.length < 3
@@ -3225,6 +3220,11 @@ if (
 
         });
       }
+
+
+      /* =====================================================
+         OpenAI API Key
+      ===================================================== */
 
       const apiKey =
         String(
@@ -3243,6 +3243,11 @@ if (
 
         });
       }
+
+
+      /* =====================================================
+         채팅 정리
+      ===================================================== */
 
       const sourceMessages =
         messages.slice(-200);
@@ -3326,16 +3331,13 @@ if (
 
 
       /* =====================================================
-         모드
+         ★ 오늘의 사건
       ===================================================== */
 
-      const modeRules =
-        finalMode === "today"
-
-          ? `
+      const modeRules = `
 [오늘의 사건]
 
-이번 채팅을 바탕으로 하나의 완성된 사건을 만든다.
+이번 방송 채팅을 바탕으로 하나의 완성된 사건을 만든다.
 
 - 사건 하나만 생성한다.
 - 용의자를 난이도에 맞게 만든다.
@@ -3343,22 +3345,9 @@ if (
 - 범인을 먼저 정하지 않는다.
 - 실제 채팅 증거를 분석한 뒤 범인을 결정한다.
 - 플레이어가 사건을 읽고 추리할 수 있어야 한다.
-`
-
-          : `
-[미제 사건]
-
-처음부터 범인이 명확하게 보이면 안 된다.
-
-여러 채팅에서 발견되는 증거를 연결해야 한다.
-
-- 모든 용의자가 의심스러워야 한다.
-- 서로 다른 의심 이유를 가진다.
-- 최소 3개의 증거를 연결한다.
-- 일부 증거는 미끼다.
-- 핵심 증거는 실제 채팅에서 가져온다.
-- 시간 순서와 발언 모순을 적극적으로 사용한다.
-- 마지막에는 한 용의자만 여러 핵심 증거를 동시에 설명할 수 있어야 한다.
+- 여러 채팅의 발언을 연결해서 사건을 구성한다.
+- 다른 용의자들도 실제 채팅에 근거한 의심 정황을 가져야 한다.
+- 일부 단서는 미끼로 사용할 수 있지만 반드시 실제 채팅에서 가져온다.
 `;
 
 
@@ -3435,6 +3424,8 @@ threat / sabotage / mystery
 10. 미끼 단서 역시 실제 채팅에서 가져온다.
 11. 범인을 먼저 정한 후 증거를 끼워 맞추지 않는다.
 12. 실제 채팅에 없는 사건 사실을 핵심 증거처럼 만들지 않는다.
+13. 사건의 핵심 내용은 반드시 제공된 방송 채팅을 기반으로 한다.
+14. 채팅에 없는 새로운 인물이나 발언을 핵심 단서로 만들지 않는다.
 `;
 
 
@@ -3485,8 +3476,10 @@ threat / sabotage / mystery
 - finalClue에도 증거 번호를 포함한다.
 - suspectReasons에도 실제 증거 근거를 포함한다.
 - 범인에게 최소 2개의 증거가 연결되어야 한다.
+- 모든 용의자는 실제 채팅에 근거한 의심 이유를 가져야 한다.
 - 추가 설명을 출력하지 않는다.
 - Markdown을 출력하지 않는다.
+- JSON 이외의 문장을 출력하지 않는다.
 `;
 
 
@@ -4061,21 +4054,6 @@ ${outputRules}
 
 
       /* =====================================================
-         미제 사건 검증
-      ===================================================== */
-
-      if (
-        finalMode === "unsolved" &&
-        exhibits.length < 3
-      ) {
-
-        throw new Error(
-          "미제 사건은 최소 3개의 증거가 필요합니다."
-        );
-      }
-
-
-      /* =====================================================
          ★ 최종 결과
       ===================================================== */
 
@@ -4083,8 +4061,11 @@ ${outputRules}
 
         ok: true,
 
+        /*
+         * 현재 후던챗은 오늘의 사건만 사용
+         */
         mode:
-          finalMode,
+          "today",
 
         difficulty:
           finalDifficulty,
@@ -4135,25 +4116,15 @@ ${outputRules}
 
 
       /* =====================================================
-         ★★★★★ 핵심 수정
-         
-         AI 사건을 현재 콘텐츠 세션에 저장한다.
-         
-         이제 채팅에서
-         /사건
-         /용의자
-         /증거
-         /추리
-         /정답
-         을 사용할 수 있다.
+         ★ AI 사건을 현재 콘텐츠 세션에 저장
       ===================================================== */
 
       if (!content) {
 
-  throw new Error(
-    "콘텐츠 세션을 찾을 수 없습니다."
-  );
-}
+        throw new Error(
+          "콘텐츠 세션을 찾을 수 없습니다."
+        );
+      }
 
       content.startedCaseCount =
         Number(
@@ -4186,7 +4157,7 @@ ${outputRules}
 
       console.log(
         "모드:",
-        finalMode
+        "today"
       );
 
       console.log(
@@ -4480,10 +4451,6 @@ async function startServer() {
 
       console.log(
         "🔴 오늘의 사건 활성화"
-      );
-
-      console.log(
-        "🧩 미제 사건 활성화"
       );
 
       console.log(
