@@ -125,7 +125,7 @@ button:disabled{
 ========================================================= */
 
 .container{
-  width:min(1100px, calc(100% - 32px));
+  width:min(1100px,calc(100% - 32px));
   margin:0 auto;
   padding:70px 0;
 }
@@ -134,9 +134,6 @@ button:disabled{
   width:100%;
 }
 
-#home{
-  width:100%;
-}
 
 /* =========================================================
    HERO
@@ -157,12 +154,7 @@ button:disabled{
 
 .hero h1{
   margin:0;
-  font-size:
-    clamp(
-      48px,
-      9vw,
-      92px
-    );
+  font-size:clamp(48px,9vw,92px);
   line-height:.95;
   letter-spacing:-6px;
   font-weight:950;
@@ -306,14 +298,12 @@ button:disabled{
 
 .setting-options{
   display:grid;
-  grid-template-columns:
-    repeat(3,1fr);
+  grid-template-columns:repeat(3,1fr);
   gap:8px;
 }
 
 .setting-options.types{
-  grid-template-columns:
-    repeat(3,1fr);
+  grid-template-columns:repeat(3,1fr);
 }
 
 .option{
@@ -337,8 +327,7 @@ button:disabled{
   border-color:#00d564;
   background:#10351f;
   color:#70ffad;
-  box-shadow:
-    0 0 0 1px #00d564 inset;
+  box-shadow:0 0 0 1px #00d564 inset;
 }
 
 .option-title{
@@ -361,138 +350,45 @@ button:disabled{
 
 
 /* =========================================================
-   OLD MODES
+   TODAY MODE
 ========================================================= */
 
-/* =========================================================
-   GAME MODES
-========================================================= */
-
-.modes{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px;
-  width:100%;
-}
-
-.mode{
-  width:100%;
-  min-height:130px;
-  padding:18px;
-
-  border:1px solid #292929;
-  background:#0d0d0d;
-  color:#f5f5f5;
-
+.today-mode{
+  border:1px solid #174f31;
+  background:
+    radial-gradient(
+      circle at 90% 0%,
+      rgba(0,213,100,.08),
+      transparent 45%
+    ),
+    #0d0d0d;
   border-radius:7px;
-  cursor:pointer;
-
-  transition:
-    transform .15s ease,
-    border-color .15s ease,
-    box-shadow .15s ease,
-    background .15s ease;
+  padding:20px;
 }
 
-.mode:hover{
-  transform:translateY(-2px);
-  border-color:#555;
-  background:#111;
-}
-
-.mode.selected{
-  border-color:#00d564;
-  box-shadow:
-    0 0 0 1px #00d564 inset;
-  background:#0d0d0d;
-}
-
-.mode-number{
+.today-mode-number{
   color:#00d564;
   font-size:11px;
   font-weight:900;
 }
 
-.mode h3{
-  margin:22px 0 7px;
-  font-size:17px;
-  color:#f5f5f5;
-}
-
-.mode p{
-  margin:0;
-  color:#777;
-  font-size:11px;
-  line-height:1.6;
-}
-
-/* =========================================================
-   LIVE CHAT
-========================================================= */
-
-.live-control{
-  display:flex;
-  gap:8px;
-  margin-bottom:12px;
-}
-
-.live-button{
-  flex:1;
-  border:1px solid #333;
-  background:#151515;
-  color:#eee;
-  padding:13px;
-  border-radius:5px;
-  font-weight:800;
-}
-
-.live-button.start{
-  border-color:#00d564;
-}
-
-.chat-status{
-  color:#777;
-  font-size:11px;
-  margin-bottom:10px;
-}
-
-.chatlog{
-  height:300px;
-  overflow-y:auto;
-  background:#080808;
-  border:1px solid #222;
-  border-radius:5px;
-  padding:12px;
-}
-
-.chat-row{
-  font-size:12px;
-  line-height:1.8;
-  border-bottom:1px solid #151515;
-  padding:3px 0;
-}
-
-.chat-name{
-  color:#00d564;
-  font-weight:900;
-  margin-right:7px;
-}
-
-.chat-content{
-  color:#ccc;
-}
-
-
-/* =========================================================
-   GENERATE
-========================================================= */
-
-.generate-info{
+.today-mode-title{
   margin-top:12px;
-  color:#666;
-  font-size:11px;
+  font-size:18px;
+  font-weight:950;
+}
+
+.today-mode-description{
+  margin-top:7px;
+  color:#777;
+  font-size:12px;
   line-height:1.7;
 }
+
+
+/* =========================================================
+   SELECTED SUMMARY
+========================================================= */
 
 .selected-summary{
   margin-top:12px;
@@ -517,12 +413,292 @@ button:disabled{
 
 
 /* =========================================================
-   GAME AREA
+   LIVE CHAT HOME
+========================================================= */
+
+.chat-card{
+  border:1px solid #292929;
+  background:#0e0e0e;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+.chat-head{
+  padding:15px 18px;
+  border-bottom:1px solid #292929;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.chat-head-left{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+
+.chat-live-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#00d564;
+  box-shadow:0 0 8px rgba(0,213,100,.7);
+}
+
+.chat-head-title{
+  font-size:13px;
+  font-weight:900;
+}
+
+.chat-head-count{
+  color:#666;
+  font-size:11px;
+}
+
+.chatlog{
+  height:340px;
+  overflow-y:auto;
+  padding:12px 10px;
+  background:#080808;
+  scrollbar-width:thin;
+  scrollbar-color:#333 transparent;
+}
+
+.chatlog::-webkit-scrollbar{
+  width:7px;
+}
+
+.chatlog::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.chatlog::-webkit-scrollbar-thumb{
+  background:#333;
+  border-radius:10px;
+}
+
+.chat-row{
+  display:flex;
+  align-items:flex-start;
+  gap:7px;
+  padding:4px 8px;
+  border-radius:4px;
+  line-height:1.55;
+  font-size:13px;
+  word-break:break-word;
+}
+
+.chat-row:hover{
+  background:#111;
+}
+
+.chat-name{
+  flex:0 0 auto;
+  color:#aaa;
+  font-weight:700;
+}
+
+.chat-content{
+  min-width:0;
+  color:#eee;
+  font-weight:400;
+}
+
+.chat-empty{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#444;
+  font-size:12px;
+}
+
+
+/* =========================================================
+   GENERATE
+========================================================= */
+
+.generate-info{
+  margin-top:12px;
+  color:#666;
+  font-size:11px;
+  line-height:1.7;
+}
+
+.generate-button{
+  width:100%;
+  margin-top:14px;
+  border:0;
+  background:#00d564;
+  color:#06100a;
+  padding:16px;
+  border-radius:6px;
+  font-size:14px;
+  font-weight:950;
+}
+
+.generate-button:hover{
+  background:#20ee80;
+}
+
+
+/* =========================================================
+   GAME
 ========================================================= */
 
 .game{
   padding-top:15px;
   padding-bottom:70px;
+}
+
+
+/* =========================================================
+   GAME LAYOUT
+========================================================= */
+
+.game-layout{
+  display:grid;
+  grid-template-columns:270px minmax(0,1fr);
+  gap:18px;
+  align-items:start;
+}
+
+.game-main{
+  min-width:0;
+}
+
+
+/* =========================================================
+   GAME CHAT
+========================================================= */
+
+.game-chat{
+  position:sticky;
+  top:88px;
+  min-width:0;
+  border:1px solid #292929;
+  background:#0e0e0e;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+.game-chat-head{
+  height:48px;
+  padding:0 14px;
+  border-bottom:1px solid #292929;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.game-chat-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  font-weight:900;
+}
+
+.game-chat-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#00d564;
+  box-shadow:0 0 8px rgba(0,213,100,.7);
+}
+
+.game-chat-count{
+  color:#555;
+  font-size:10px;
+}
+
+.game-chatlog{
+  height:360px;
+  overflow-y:auto;
+  padding:8px 6px;
+  background:#080808;
+  scrollbar-width:thin;
+  scrollbar-color:#333 transparent;
+}
+
+.game-chatlog::-webkit-scrollbar{
+  width:6px;
+}
+
+.game-chatlog::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.game-chatlog::-webkit-scrollbar-thumb{
+  background:#333;
+  border-radius:10px;
+}
+
+.game-chat-row{
+  padding:5px 7px;
+  border-radius:4px;
+  font-size:11px;
+  line-height:1.5;
+  word-break:break-word;
+}
+
+.game-chat-row:hover{
+  background:#111;
+}
+
+.game-chat-name{
+  color:#888;
+  font-weight:800;
+  margin-right:5px;
+}
+
+.game-chat-content{
+  color:#ddd;
+}
+
+.game-chat-command{
+  background:#102117;
+  border:1px solid #174f31;
+}
+
+.game-chat-command .game-chat-content{
+  color:#70ffad;
+  font-weight:900;
+}
+
+.game-chat-empty{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#444;
+  font-size:11px;
+  padding:20px;
+}
+
+.command-guide{
+  padding:11px 13px;
+  border-top:1px solid #292929;
+  background:#0c0c0c;
+}
+
+.command-guide-title{
+  color:#666;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1px;
+  margin-bottom:5px;
+}
+
+.command-guide-text{
+  color:#888;
+  font-size:10px;
+  line-height:1.6;
+}
+
+.command-guide-text strong{
+  color:#70ffad;
 }
 
 
@@ -565,41 +741,18 @@ button:disabled{
   margin-bottom:22px;
 }
 
-.live-badge{
+.case-label{
   display:inline-flex;
   align-items:center;
   gap:8px;
-  color:#ff6868;
-  border:1px solid #633030;
-  background:#211010;
+  color:#70ffad;
+  border:1px solid #174f31;
+  background:#102117;
   padding:8px 12px;
   border-radius:5px;
   font-size:11px;
   font-weight:950;
   letter-spacing:1.5px;
-}
-
-.live-dot{
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:#ff3d3d;
-  box-shadow:0 0 10px #ff3d3d;
-  animation:livePulse 1.2s infinite;
-}
-
-@keyframes livePulse{
-
-  0%,100%{
-    opacity:1;
-    transform:scale(1);
-  }
-
-  50%{
-    opacity:.45;
-    transform:scale(.75);
-  }
-
 }
 
 .case-number{
@@ -610,12 +763,7 @@ button:disabled{
 }
 
 .game-title{
-  font-size:
-    clamp(
-      42px,
-      7vw,
-      76px
-    );
+  font-size:clamp(42px,7vw,76px);
   line-height:1;
   margin:0;
   letter-spacing:-5px;
@@ -636,13 +784,12 @@ button:disabled{
 
 
 /* =========================================================
-   INVESTIGATION STATUS BAR
+   INVESTIGATION STATUS
 ========================================================= */
 
 .investigation-bar{
   display:grid;
-  grid-template-columns:
-    repeat(4,1fr);
+  grid-template-columns:repeat(3,1fr);
   gap:8px;
   margin-top:25px;
 }
@@ -675,7 +822,7 @@ button:disabled{
 
 
 /* =========================================================
-   EVIDENCE HEADER
+   EVIDENCE
 ========================================================= */
 
 .evidence-section{
@@ -698,11 +845,6 @@ button:disabled{
   color:#666;
   font-size:10px;
 }
-
-
-/* =========================================================
-   EVIDENCE CARDS
-========================================================= */
 
 .evidence-grid{
   display:grid;
@@ -774,7 +916,7 @@ button:disabled{
 
 
 /* =========================================================
-   SUSPECT SECTION
+   SUSPECT
 ========================================================= */
 
 .suspect-section{
@@ -803,8 +945,7 @@ button:disabled{
 
 .suspects{
   display:grid;
-  grid-template-columns:
-    repeat(4,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:10px;
 }
 
@@ -818,19 +959,26 @@ button:disabled{
       #0e0e0e
     );
   color:#eee;
-  padding:20px 12px;
+  padding:16px 12px;
   border-radius:7px;
   font-weight:950;
   text-align:center;
   font-size:15px;
-  transition:
-    .18s;
+  transition:.18s;
 }
 
 .suspect:hover{
   border-color:#00d564;
   background:#102117;
   transform:translateY(-2px);
+}
+
+.suspect-number{
+  display:block;
+  color:#00d564;
+  font-size:10px;
+  margin-bottom:8px;
+  letter-spacing:1px;
 }
 
 .suspect.correct{
@@ -860,7 +1008,27 @@ button:disabled{
 
 
 /* =========================================================
-   RESULT OVERLAY
+   COMMAND STATUS
+========================================================= */
+
+.command-status{
+  margin-top:10px;
+  padding:10px 13px;
+  border:1px solid #292929;
+  background:#0e0e0e;
+  border-radius:6px;
+  color:#666;
+  font-size:10px;
+  line-height:1.5;
+}
+
+.command-status strong{
+  color:#70ffad;
+}
+
+
+/* =========================================================
+   RESULT
 ========================================================= */
 
 .result-overlay{
@@ -876,10 +1044,7 @@ button:disabled{
 }
 
 .result-modal{
-  width:min(
-    540px,
-    100%
-  );
+  width:min(540px,100%);
   border-radius:12px;
   border:1px solid #333;
   background:#101010;
@@ -930,8 +1095,7 @@ button:disabled{
     rgba(0,0,0,.8);
 }
 
-.result-modal.success
-.result-icon{
+.result-modal.success .result-icon{
   background:#10351f;
   color:#70ffad;
   border:1px solid #00d564;
@@ -946,8 +1110,7 @@ button:disabled{
     rgba(0,0,0,.8);
 }
 
-.result-modal.fail
-.result-icon{
+.result-modal.fail .result-icon{
   background:#351414;
   color:#ff9292;
   border:1px solid #ff5b5b;
@@ -1039,19 +1202,22 @@ button:disabled{
 
 
 /* =========================================================
-   RESPONSIVE 800
+   RESPONSIVE
 ========================================================= */
 
-@media(max-width:800px){
+@media(max-width:900px){
 
-  .modes{
-    grid-template-columns:
-      1fr 1fr;
+  .game-layout{
+    grid-template-columns:220px minmax(0,1fr);
+    gap:12px;
+  }
+
+  .game-chatlog{
+    height:330px;
   }
 
   .suspects{
-    grid-template-columns:
-      1fr 1fr;
+    grid-template-columns:1fr 1fr;
   }
 
   .case-settings{
@@ -1059,16 +1225,34 @@ button:disabled{
   }
 
   .investigation-bar{
-    grid-template-columns:
-      1fr 1fr;
+    grid-template-columns:1fr 1fr;
   }
 
 }
 
 
-/* =========================================================
-   RESPONSIVE 600
-========================================================= */
+@media(max-width:700px){
+
+  .game-layout{
+    grid-template-columns:1fr;
+  }
+
+  .game-main{
+    order:1;
+  }
+
+  .game-chat{
+    order:2;
+    position:relative;
+    top:auto;
+  }
+
+  .game-chatlog{
+    height:240px;
+  }
+
+}
+
 
 @media(max-width:600px){
 
@@ -1081,8 +1265,7 @@ button:disabled{
   }
 
   .container{
-    width:
-      calc(100% - 24px);
+    width:calc(100% - 24px);
     padding:35px 0;
   }
 
@@ -1095,7 +1278,6 @@ button:disabled{
     letter-spacing:-4px;
   }
 
-  .modes,
   .evidence-grid{
     grid-template-columns:1fr;
   }
@@ -1112,11 +1294,6 @@ button:disabled{
   .setting-options,
   .setting-options.types{
     grid-template-columns:1fr 1fr;
-  }
-
-  .game-top{
-    align-items:flex-start;
-    flex-direction:column;
   }
 
   .live-case-header{
@@ -1148,10 +1325,6 @@ button:disabled{
 
 }
 
-
-/* =========================================================
-   VERY SMALL MOBILE
-========================================================= */
 
 @media(max-width:380px){
 
@@ -1194,7 +1367,6 @@ button:disabled{
     후던<span>챗</span>
   </div>
 
-
   <div class="header-right">
 
     <div
@@ -1203,7 +1375,6 @@ button:disabled{
     >
       로그인 안 됨
     </div>
-
 
     <button
       id="loginTop"
@@ -1227,26 +1398,21 @@ button:disabled{
 <section id="home">
 
 
-  <!-- HERO -->
-
   <div class="hero">
 
     <div class="hero-small">
       치지직 채팅 추리 게임
     </div>
 
-
     <h1>
       범인은<br>
       <span>누구인가?</span>
     </h1>
 
-
     <p>
       방송 채팅 속에 숨겨진 단서를 찾아라.<br>
       시청자들의 대화가 하나의 사건이 됩니다.
     </p>
-
 
     <button
       id="heroStart"
@@ -1258,9 +1424,7 @@ button:disabled{
   </div>
 
 
-  <!-- ===================================================
-       CHANNEL
-  =================================================== -->
+  <!-- CHANNEL -->
 
   <div class="card">
 
@@ -1276,7 +1440,6 @@ button:disabled{
 
     </div>
 
-
     <div class="card-body">
 
       <div class="channel">
@@ -1290,16 +1453,14 @@ button:disabled{
             치지직 채널을 연결해주세요
           </div>
 
-
           <div
             id="channelInfo"
             class="channel-info"
           >
-            로그인하면 본인 방송의 실시간 채팅을 수집할 수 있습니다.
+            로그인하면 방송 채팅이 자동으로 연결됩니다.
           </div>
 
         </div>
-
 
         <button
           id="login"
@@ -1315,9 +1476,7 @@ button:disabled{
   </div>
 
 
-  <!-- ===================================================
-       CASE SETTINGS
-  =================================================== -->
+  <!-- CASE SETTINGS -->
 
   <div class="section">
 
@@ -1325,11 +1484,7 @@ button:disabled{
       사건 설정
     </div>
 
-
     <div class="case-settings">
-
-
-      <!-- DIFFICULTY -->
 
       <div class="setting-box">
 
@@ -1337,15 +1492,12 @@ button:disabled{
           난이도
         </div>
 
-
         <div class="setting-options">
-
 
           <button
             class="option active"
             data-difficulty="easy"
           >
-
             <span class="option-title">
               쉬움
             </span>
@@ -1353,15 +1505,12 @@ button:disabled{
             <span class="option-description">
               단서가 비교적 명확합니다
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-difficulty="normal"
           >
-
             <span class="option-title">
               보통
             </span>
@@ -1369,15 +1518,12 @@ button:disabled{
             <span class="option-description">
               단서를 조합해야 합니다
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-difficulty="hard"
           >
-
             <span class="option-title">
               어려움
             </span>
@@ -1385,16 +1531,12 @@ button:disabled{
             <span class="option-description">
               숨겨진 단서를 찾아야 합니다
             </span>
-
           </button>
-
 
         </div>
 
       </div>
 
-
-      <!-- CASE TYPE -->
 
       <div class="setting-box">
 
@@ -1402,15 +1544,12 @@ button:disabled{
           사건 유형
         </div>
 
-
         <div class="setting-options types">
-
 
           <button
             class="option active"
             data-case-type="random"
           >
-
             <span class="option-title">
               랜덤
             </span>
@@ -1418,15 +1557,12 @@ button:disabled{
             <span class="option-description">
               AI가 자유롭게 선택
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-case-type="theft"
           >
-
             <span class="option-title">
               절도
             </span>
@@ -1434,15 +1570,12 @@ button:disabled{
             <span class="option-description">
               물건이 사라진 사건
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-case-type="missing"
           >
-
             <span class="option-title">
               실종
             </span>
@@ -1450,15 +1583,12 @@ button:disabled{
             <span class="option-description">
               누군가 사라진 사건
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-case-type="betrayal"
           >
-
             <span class="option-title">
               배신
             </span>
@@ -1466,15 +1596,12 @@ button:disabled{
             <span class="option-description">
               숨겨진 관계와 거짓말
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-case-type="secret"
           >
-
             <span class="option-title">
               비밀
             </span>
@@ -1482,15 +1609,12 @@ button:disabled{
             <span class="option-description">
               숨겨진 진실을 추적
             </span>
-
           </button>
-
 
           <button
             class="option"
             data-case-type="mystery"
           >
-
             <span class="option-title">
               미스터리
             </span>
@@ -1498,14 +1622,11 @@ button:disabled{
             <span class="option-description">
               복잡한 단서를 추리
             </span>
-
           </button>
-
 
         </div>
 
       </div>
-
 
     </div>
 
@@ -1522,7 +1643,6 @@ button:disabled{
         </span>
       </div>
 
-
       <div class="selected-tag">
         유형:
         <span id="selectedType">
@@ -1535,71 +1655,35 @@ button:disabled{
   </div>
 
 
- <!-- ===================================================
-     GAME MODES
-=================================================== -->
+  <!-- GAME MODE -->
 
-<div class="section">
+  <div class="section">
 
-  <div class="section-title">
-    게임 모드
-  </div>
+    <div class="section-title">
+      게임 모드
+    </div>
 
-  <div class="modes">
+    <div class="today-mode">
 
-    <button
-      type="button"
-      class="mode selected"
-      data-game-mode="today"
-    >
-      <div class="mode-number">
+      <div class="today-mode-number">
         01
       </div>
 
-      <h3>
+      <div class="today-mode-title">
         오늘의 사건
-      </h3>
-
-      <p>
-        현재 채팅에서 하나의 사건을 발견하고 바로 범인을 추리합니다.
-      </p>
-    </button>
-
-
-    <button
-      type="button"
-      class="mode"
-      data-game-mode="unsolved"
-    >
-      <div class="mode-number">
-        02
       </div>
 
-      <h3>
-        미제 사건
-      </h3>
+      <div class="today-mode-description">
+        현재 방송 채팅을 분석해 하나의 사건을 만들고,
+        증거를 확인한 뒤 범인을 추리합니다.
+      </div>
 
-      <p>
-        증거를 한 단계씩 확보하면서 여러 단서를 연결해 사건을 해결합니다.
-      </p>
-    </button>
+    </div>
 
   </div>
 
 
-  <div
-    id="gameModeInfo"
-    class="generate-info"
-    style="margin-top:12px;"
-  >
-    오늘의 사건: 채팅을 한 번 분석해 사건을 생성하고 바로 범인을 지목합니다.
-  </div>
-
-</div>
-
-  <!-- ===================================================
-       LIVE CHAT
-  =================================================== -->
+  <!-- CHAT -->
 
   <div class="section">
 
@@ -1607,19 +1691,23 @@ button:disabled{
       실시간 채팅
     </div>
 
+    <div class="chat-card">
 
-    <div class="card">
+      <div class="chat-head">
 
-      <div class="card-head">
+        <div class="chat-head-left">
 
-        <div class="card-title">
-          방송 채팅 기록
+          <span class="chat-live-dot"></span>
+
+          <div class="chat-head-title">
+            방송 채팅
+          </div>
+
         </div>
-
 
         <div
           id="chatCount"
-          class="card-sub"
+          class="chat-head-count"
         >
           채팅 0개
         </div>
@@ -1627,51 +1715,13 @@ button:disabled{
       </div>
 
 
-      <div class="card-body">
+      <div
+        id="chatlog"
+        class="chatlog"
+      >
 
-        <div class="live-control">
-
-          <button
-            id="start"
-            class="live-button start"
-          >
-            채팅 수집 시작
-          </button>
-
-
-          <button
-            id="stop"
-            class="live-button"
-          >
-            수집 중지
-          </button>
-
-        </div>
-
-
-        <div
-          id="liveStatus"
-          class="chat-status"
-        >
-          로그인 후 방송이 켜져 있으면
-          실시간 채팅을 자동으로 수집합니다.
-        </div>
-
-
-        <div
-          id="chatlog"
-          class="chatlog"
-        >
-
-          <div
-            style="
-              color:#555;
-              font-size:12px;
-            "
-          >
-            아직 수집된 채팅이 없습니다.
-          </div>
-
+        <div class="chat-empty">
+          로그인하면 방송 채팅이 자동으로 표시됩니다.
         </div>
 
       </div>
@@ -1682,25 +1732,16 @@ button:disabled{
 
 
   <button
-    id="history"
-    class="back"
-  >
-    저장된 채팅 내역 불러오기
-  </button>
-
-
-  <button
     id="open"
-    class="main-button"
-    style="width:100%;"
+    class="generate-button"
   >
-    채팅으로 사건 만들기
+    오늘의 사건 만들기
   </button>
 
 
   <div class="generate-info">
-    선택한 난이도와 사건 유형을 바탕으로 AI가 채팅에서 단서를 찾아
-    새로운 추리 사건을 생성합니다.
+    현재까지 모인 방송 채팅을 분석하여
+    선택한 난이도와 사건 유형에 맞는 추리 사건을 생성합니다.
   </div>
 
 
@@ -1724,266 +1765,294 @@ button:disabled{
   class="game hidden"
 >
 
-
-  <!-- ===================================================
-       LIVE CASE HEADER
-  =================================================== -->
-
-  <div class="live-case-header">
-
-
-    <div class="live-case-top">
-
-      <div class="live-badge">
-
-        <span class="live-dot"></span>
-
-        LIVE 수사 사건
-
-      </div>
-
-
-      <div class="case-number">
-        CASE // LIVE INVESTIGATION
-      </div>
-
-    </div>
-
-
-    <h1 class="game-title">
-      범인은
-      <span class="game-title-highlight">
-        누구인가?
-      </span>
-    </h1>
-
-
-    <p
-      id="brief"
-      class="brief"
-    >
-      사건을 분석하고 있습니다.
-    </p>
+  <div class="game-layout">
 
 
     <!-- =================================================
-         INVESTIGATION STATUS
+         GAME CHAT
     ================================================= -->
 
-    <div class="investigation-bar">
+    <aside class="game-chat">
 
+      <div class="game-chat-head">
 
-      <div class="investigation-item">
+        <div class="game-chat-title">
 
-        <div class="investigation-label">
-          난이도
+          <span class="game-chat-dot"></span>
+
+          실시간 채팅
+
         </div>
 
         <div
-          id="gameDifficulty"
-          class="investigation-value green"
+          id="gameChatCount"
+          class="game-chat-count"
         >
-          쉬움
+          0개
         </div>
 
       </div>
 
 
-      <div class="investigation-item">
+      <div
+        id="gameChatlog"
+        class="game-chatlog"
+      >
 
-        <div class="investigation-label">
-          사건 유형
+        <div class="game-chat-empty">
+          사건 생성 후<br>
+          시청자 채팅이 표시됩니다.
         </div>
+
+      </div>
+
+
+      <div class="command-guide">
+
+        <div class="command-guide-title">
+          시청자 명령어
+        </div>
+
+        <div class="command-guide-text">
+          <strong>/용의자 1번</strong><br>
+          번호에 해당하는 용의자를 선택합니다.
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <!-- =================================================
+         MAIN CASE
+    ================================================= -->
+
+    <div class="game-main">
+
+
+      <!-- CASE HEADER -->
+
+      <div class="live-case-header">
+
+        <div class="live-case-top">
+
+          <div class="case-label">
+            🕵️ 오늘의 사건
+          </div>
+
+          <div class="case-number">
+            CASE // TODAY
+          </div>
+
+        </div>
+
+
+        <h1 class="game-title">
+          범인은
+          <span class="game-title-highlight">
+            누구인가?
+          </span>
+        </h1>
+
+
+        <p
+          id="brief"
+          class="brief"
+        >
+          사건을 분석하고 있습니다.
+        </p>
+
+
+        <div class="investigation-bar">
+
+          <div class="investigation-item">
+
+            <div class="investigation-label">
+              난이도
+            </div>
+
+            <div
+              id="gameDifficulty"
+              class="investigation-value green"
+            >
+              쉬움
+            </div>
+
+          </div>
+
+
+          <div class="investigation-item">
+
+            <div class="investigation-label">
+              사건 유형
+            </div>
+
+            <div
+              id="gameType"
+              class="investigation-value"
+            >
+              랜덤
+            </div>
+
+          </div>
+
+
+          <div class="investigation-item">
+
+            <div class="investigation-label">
+              용의자
+            </div>
+
+            <div
+              id="count"
+              class="investigation-value"
+            >
+              용의자 0명
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- EVIDENCE -->
+
+      <div class="evidence-section">
+
+        <div class="evidence-section-head">
+
+          <div class="evidence-section-title">
+            🧩 확보된 증거
+          </div>
+
+          <div class="evidence-section-sub">
+            CHAT EVIDENCE
+          </div>
+
+        </div>
+
 
         <div
-          id="gameType"
-          class="investigation-value"
+          id="exhibits"
+          class="evidence-grid"
         >
-          랜덤
         </div>
 
       </div>
 
 
-      <div class="investigation-item">
+      <!-- SUSPECTS -->
 
-        <div class="investigation-label">
-          용의자
+      <div class="suspect-section">
+
+        <div class="suspect-section-head">
+
+          <div class="suspect-title">
+            👤 용의자를 선택하세요
+          </div>
+
+          <div class="suspect-help">
+            직접 클릭하거나 채팅으로 선택할 수 있습니다.
+          </div>
+
         </div>
+
 
         <div
-          id="count"
-          class="investigation-value"
+          id="choices"
+          class="suspects"
         >
-          용의자 0명
         </div>
 
-      </div>
-
-
-      <div class="investigation-item">
-
-        <div class="investigation-label">
-          수사 상태
-        </div>
 
         <div
-          class="investigation-value green"
+          id="commandStatus"
+          class="command-status"
         >
-          수사 진행 중
+          시청자가 채팅에서
+          <strong>/용의자 1번</strong>
+          형식으로 답을 제출할 수 있습니다.
         </div>
 
       </div>
 
 
-    </div>
-
-  </div>
-
-
-  <!-- ===================================================
-       EVIDENCE
-  =================================================== -->
-
-  <div class="evidence-section">
-
-
-    <div class="evidence-section-head">
-
-      <div class="evidence-section-title">
-        🧩 확보된 증거
-      </div>
-
-      <div class="evidence-section-sub">
-        CHAT EVIDENCE
-      </div>
-
-    </div>
-
-
-    <div
-      id="exhibits"
-      class="evidence-grid"
-    >
-    </div>
-
-
-    <div
-      id="unsolvedProgress"
-      class="hidden"
-      style="margin-top:18px;padding:16px;border:1px solid #292929;background:#0e0e0e;border-radius:7px;"
-    >
-      <div id="unsolvedProgressText" style="font-size:13px;font-weight:900;margin-bottom:10px;"></div>
-      <div id="unsolvedProgressHint" style="font-size:12px;color:#777;margin-bottom:12px;"></div>
-      <button id="nextEvidence" class="main-button" style="margin-top:0;width:100%;">다음 단서 확인</button>
-    </div>
-
-
-  </div>
-
-
-  <!-- ===================================================
-       SUSPECTS
-  =================================================== -->
-
-  <div class="suspect-section">
-
-
-    <div class="suspect-section-head">
-
-      <div class="suspect-title">
-        👤 용의자를 선택하세요
-      </div>
-
-      <div class="suspect-help">
-        증거를 분석하여 범인을 지목하세요
-      </div>
-
-    </div>
-
-
-    <div
-      id="choices"
-      class="suspects"
-    >
-    </div>
-
-
-  </div>
-
-
-  <!-- ===================================================
-       RESULT OVERLAY
-  =================================================== -->
-
-  <div
-    id="resultOverlay"
-    class="result-overlay hidden"
-  >
-
-    <div
-      id="resultModal"
-      class="result-modal"
-    >
+      <!-- RESULT -->
 
       <div
-        id="resultIcon"
-        class="result-icon"
+        id="resultOverlay"
+        class="result-overlay hidden"
       >
-        ✓
-      </div>
+
+        <div
+          id="resultModal"
+          class="result-modal"
+        >
+
+          <div
+            id="resultIcon"
+            class="result-icon"
+          >
+            ✓
+          </div>
 
 
-      <div
-        id="resultKicker"
-        class="result-kicker"
-      >
-        INVESTIGATION COMPLETE
-      </div>
+          <div
+            id="resultKicker"
+            class="result-kicker"
+          >
+            INVESTIGATION COMPLETE
+          </div>
 
 
-      <div
-        id="resultTitle"
-        class="result-title"
-      >
-        사건 해결!
-      </div>
+          <div
+            id="resultTitle"
+            class="result-title"
+          >
+            사건 해결!
+          </div>
 
 
-      <div
-        id="resultDescription"
-        class="result-description"
-      >
-        정확하게 범인을 찾아냈습니다.
-      </div>
+          <div
+            id="resultDescription"
+            class="result-description"
+          >
+            정확하게 범인을 찾아냈습니다.
+          </div>
 
 
-      <div
-        id="resultAnswer"
-        class="result-answer"
-      >
+          <div
+            id="resultAnswer"
+            class="result-answer"
+          >
+          </div>
+
+
+          <button
+            id="resultClose"
+            class="result-close"
+          >
+            사건 화면으로 돌아가기
+          </button>
+
+        </div>
+
       </div>
 
 
       <button
-        id="resultClose"
-        class="result-close"
+        id="back"
+        class="back"
       >
-        사건 화면으로 돌아가기
+        사건 목록으로 돌아가기
       </button>
+
 
     </div>
 
   </div>
-
-
-  <button
-    id="back"
-    class="back"
-  >
-    사건 목록으로 돌아가기
-  </button>
-
 
 </section>
 
@@ -1996,7 +2065,7 @@ button:disabled{
 <script>
 
 /* =========================================================
-   상태
+   STATE
 ========================================================= */
 
 let messages = [];
@@ -2005,20 +2074,41 @@ let polling = null;
 
 let loggedIn = false;
 
-let selectedGameMode = "today";
-
 let currentCase = null;
-let unsolvedStage = 1;
-
-
-/* =========================================================
-   사건 설정
-========================================================= */
 
 let selectedDifficulty = "easy";
 
 let selectedCaseType = "random";
 
+
+/*
+ * 사건 생성 이후에 들어온 메시지만
+ * 명령어로 처리하기 위한 기준점
+ */
+let commandStartIds = new Set();
+
+
+/*
+ * 이미 처리한 명령어 메시지
+ */
+let processedCommandIds = new Set();
+
+
+/*
+ * 동시에 명령어를 처리하지 않도록 방지
+ */
+let commandProcessing = false;
+
+
+/*
+ * 사건이 이미 끝났는지 여부
+ */
+let caseFinished = false;
+
+
+/* =========================================================
+   NAMES
+========================================================= */
 
 const difficultyNames = {
 
@@ -2033,16 +2123,6 @@ const difficultyNames = {
 
 };
 
-
-const gameModeNames = {
-  today: "오늘의 사건",
-  unsolved: "미제 사건"
-};
-
-const gameModeDescriptions = {
-  today: "오늘의 사건: 채팅을 한 번 분석해 사건을 생성하고 바로 범인을 지목합니다.",
-  unsolved: "미제 사건: 증거를 한 단계씩 확보하면서 여러 단서를 연결해 사건을 해결합니다."
-};
 
 const caseTypeNames = {
 
@@ -2068,7 +2148,7 @@ const caseTypeNames = {
 
 
 /* =========================================================
-   난이도 선택
+   DIFFICULTY
 ========================================================= */
 
 document
@@ -2121,7 +2201,7 @@ document
 
 
 /* =========================================================
-   사건 유형 선택
+   CASE TYPE
 ========================================================= */
 
 document
@@ -2174,33 +2254,7 @@ document
 
 
 /* =========================================================
-   게임 모드 선택
-========================================================= */
-
-function updateGameModeUI(){
-  document.querySelectorAll("[data-game-mode]").forEach(item => {
-    item.classList.toggle("selected", item.dataset.gameMode === selectedGameMode);
-  });
-
-  const info = document.getElementById("gameModeInfo");
-  if(info) info.textContent = gameModeDescriptions[selectedGameMode] || gameModeDescriptions.today;
-
-  const openButton = document.getElementById("open");
-  if(openButton) openButton.textContent = `${gameModeNames[selectedGameMode] || "오늘의 사건"} 시작하기`;
-}
-
-document.querySelectorAll("[data-game-mode]").forEach(item => {
-  item.addEventListener("click", () => {
-    selectedGameMode = item.dataset.gameMode || "today";
-    updateGameModeUI();
-  });
-});
-
-updateGameModeUI();
-
-
-/* =========================================================
-   로그인
+   LOGIN
 ========================================================= */
 
 document
@@ -2217,7 +2271,7 @@ document
   .getElementById("loginTop")
   .onclick = () => {
 
-    if (loggedIn) {
+    if(loggedIn){
 
       location.href =
         "/auth/logout";
@@ -2226,7 +2280,6 @@ document
 
     }
 
-
     location.href =
       "/auth/login";
 
@@ -2234,12 +2287,12 @@ document
 
 
 /* =========================================================
-   로그인 확인
+   LOGIN CHECK
 ========================================================= */
 
 async function checkLogin(){
 
-  try {
+  try{
 
     const response =
       await fetch(
@@ -2259,7 +2312,7 @@ async function checkLogin(){
       !!data.loggedIn;
 
 
-    if (loggedIn) {
+    if(loggedIn){
 
       const me =
         data.me ||
@@ -2284,7 +2337,7 @@ async function checkLogin(){
           "channelInfo"
         )
         .textContent =
-          "치지직 채널이 연결되었습니다. 방송 상태를 확인합니다.";
+          "채팅이 자동으로 연결됩니다.";
 
 
       document
@@ -2319,9 +2372,9 @@ async function checkLogin(){
           "채널 연결됨";
 
 
-      await checkLiveStatus();
+      await startAutoChat();
 
-    } else {
+    }else{
 
       document
         .getElementById(
@@ -2332,7 +2385,7 @@ async function checkLogin(){
 
     }
 
-  } catch(error) {
+  }catch(error){
 
     console.error(
       "로그인 상태 확인 오류:",
@@ -2345,127 +2398,12 @@ async function checkLogin(){
 
 
 /* =========================================================
-   방송 상태
+   AUTO CHAT
 ========================================================= */
 
-async function checkLiveStatus(){
+async function startAutoChat(){
 
-  if (!loggedIn) {
-
-    return;
-
-  }
-
-
-  try {
-
-    const response =
-      await fetch(
-        "/api/live/status",
-        {
-          credentials:
-            "include"
-        }
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if (!response.ok) {
-
-      return;
-
-    }
-
-
-    if (data.live) {
-
-      document
-        .getElementById(
-          "liveStatus"
-        )
-        .textContent =
-          "🔴 방송 중입니다. 실시간 채팅을 수집하고 있습니다.";
-
-
-      startPolling();
-
-    } else {
-
-      document
-        .getElementById(
-          "liveStatus"
-        )
-        .textContent =
-          "⚫ 현재 방송 중이 아닙니다.";
-
-    }
-
-
-  } catch(error) {
-
-    console.error(
-      "방송 상태 오류:",
-      error
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   메인 시작
-========================================================= */
-
-document
-  .getElementById(
-    "heroStart"
-  )
-  .onclick = () => {
-
-    document
-      .getElementById(
-        "start"
-      )
-      .scrollIntoView({
-
-        behavior:
-          "smooth",
-
-        block:
-          "center"
-
-      });
-
-  };
-
-
-/* =========================================================
-   채팅 수집 시작
-========================================================= */
-
-document
-  .getElementById(
-    "start"
-  )
-  .onclick =
-async () => {
-
-  if (!loggedIn) {
-
-    alert(
-      "먼저 치지직 로그인을 해주세요."
-    );
-
-    return;
-
-  }
-
-
-  try {
+  try{
 
     const response =
       await fetch(
@@ -2486,49 +2424,37 @@ async () => {
       await response.json();
 
 
-    if (!response.ok) {
+    if(!response.ok){
 
-      alert(
-        data.error ||
-        "채팅 수집을 시작할 수 없습니다."
+      console.warn(
+        "자동 채팅 연결 실패:",
+        data.error
       );
-
-      return;
 
     }
 
+  }catch(error){
 
-    document
-      .getElementById(
-        "liveStatus"
-      )
-      .textContent =
-        "🟢 실시간 채팅을 수집하고 있습니다.";
-
-
-    startPolling();
-
-
-  } catch(error) {
-
-    console.error(error);
-
-    alert(
-      "서버에 연결할 수 없습니다."
+    console.warn(
+      "자동 채팅 연결 오류:",
+      error
     );
 
   }
 
-};
+
+  startPolling();
+
+}
 
 
 /* =========================================================
-   폴링
+   POLLING
 ========================================================= */
 
 function startPolling(){
 
-  if (polling) {
+  if(polling){
 
     clearInterval(
       polling
@@ -2550,74 +2476,19 @@ function startPolling(){
 
 
 /* =========================================================
-   채팅 중지
-========================================================= */
-
-document
-  .getElementById(
-    "stop"
-  )
-  .onclick =
-async () => {
-
-  try {
-
-    await fetch(
-      "/api/chat/stop",
-      {
-
-        method:
-          "POST",
-
-        credentials:
-          "include"
-
-      }
-    );
-
-  } catch(error) {
-
-    console.error(error);
-
-  }
-
-
-  if (polling) {
-
-    clearInterval(
-      polling
-    );
-
-    polling =
-      null;
-
-  }
-
-
-  document
-    .getElementById(
-      "liveStatus"
-    )
-    .textContent =
-      "채팅 수집을 중지했습니다.";
-
-};
-
-
-/* =========================================================
-   채팅 가져오기
+   LOAD CHAT
 ========================================================= */
 
 async function loadMessages(){
 
-  if (!loggedIn) {
+  if(!loggedIn){
 
     return;
 
   }
 
 
-  try {
+  try{
 
     const response =
       await fetch(
@@ -2633,7 +2504,7 @@ async function loadMessages(){
       await response.json();
 
 
-    if (!response.ok) {
+    if(!response.ok){
 
       return;
 
@@ -2658,7 +2529,30 @@ async function loadMessages(){
     );
 
 
-  } catch(error) {
+    /*
+     * 사건 화면이 열려 있으면
+     * 왼쪽 게임 채팅도 계속 갱신
+     */
+    if(
+      !document
+        .getElementById("game")
+        .classList
+        .contains("hidden")
+    ){
+
+      renderGameChat(
+        messages
+      );
+
+
+      processChatCommands(
+        messages
+      );
+
+    }
+
+
+  }catch(error){
 
     console.error(
       "채팅 조회 오류:",
@@ -2671,12 +2565,10 @@ async function loadMessages(){
 
 
 /* =========================================================
-   채팅 표시
+   CHAT RENDER
 ========================================================= */
 
-function renderChat(
-  list
-){
+function renderChat(list){
 
   const chatlog =
     document.getElementById(
@@ -2684,18 +2576,11 @@ function renderChat(
     );
 
 
-  if (
-    !list.length
-  ) {
+  if(!list.length){
 
     chatlog.innerHTML = `
-      <div
-        style="
-          color:#555;
-          font-size:12px;
-        "
-      >
-        아직 수집된 채팅이 없습니다.
+      <div class="chat-empty">
+        방송 채팅을 기다리는 중...
       </div>
     `;
 
@@ -2710,50 +2595,30 @@ function renderChat(
       .map(
         message => {
 
-          const time =
-            message.timestamp
-              ? new Date(
-                  Number(
-                    message.timestamp
-                  )
-                ).toLocaleTimeString(
-                  "ko-KR",
-                  {
-                    hour:
-                      "2-digit",
-                    minute:
-                      "2-digit",
-                    second:
-                      "2-digit"
-                  }
-                )
-              : "";
+          const nickname =
+            message.nickname ||
+            message.username ||
+            "익명";
+
+
+          const content =
+            message.content ||
+            message.message ||
+            "";
 
 
           return `
             <div class="chat-row">
 
-              <span
-                style="
-                  color:#555;
-                  font-size:10px;
-                  margin-right:8px;
-                "
-              >
-                ${escapeHtml(
-                  time
-                )}
-              </span>
-
               <span class="chat-name">
                 ${escapeHtml(
-                  message.nickname
+                  nickname
                 )}
               </span>
 
               <span class="chat-content">
                 ${escapeHtml(
-                  message.content
+                  content
                 )}
               </span>
 
@@ -2772,41 +2637,521 @@ function renderChat(
 
 
 /* =========================================================
-   저장된 채팅
+   GAME CHAT RENDER
 ========================================================= */
 
-document
-  .getElementById(
-    "history"
-  )
-  .onclick =
-async () => {
+function renderGameChat(list){
 
-  const button =
+  const chatlog =
     document.getElementById(
-      "history"
+      "gameChatlog"
     );
 
 
-  if (!loggedIn) {
-
-    alert(
-      "먼저 로그인해주세요."
+  const count =
+    document.getElementById(
+      "gameChatCount"
     );
+
+
+  if(!chatlog){
 
     return;
 
   }
 
 
-  try {
+  count.textContent =
+    `${list.length}개`;
 
-    button.disabled =
-      true;
 
-    button.textContent =
-      "채팅 내역을 불러오는 중...";
+  if(!list.length){
 
+    chatlog.innerHTML = `
+      <div class="game-chat-empty">
+        방송 채팅을 기다리는 중...
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  chatlog.innerHTML =
+    list
+      .slice(-120)
+      .map(
+        message => {
+
+          const nickname =
+            message.nickname ||
+            message.username ||
+            "익명";
+
+
+          const content =
+            message.content ||
+            message.message ||
+            "";
+
+
+          const command =
+            parseSuspectCommand(
+              content
+            );
+
+
+          const isCommand =
+            command !== null;
+
+
+          return `
+            <div
+              class="
+                game-chat-row
+                ${isCommand ? "game-chat-command" : ""}
+              "
+            >
+
+              <span class="game-chat-name">
+                ${escapeHtml(
+                  nickname
+                )}
+              </span>
+
+              <span class="game-chat-content">
+                ${escapeHtml(
+                  content
+                )}
+              </span>
+
+            </div>
+          `;
+
+        }
+      )
+      .join("");
+
+
+  chatlog.scrollTop =
+    chatlog.scrollHeight;
+
+}
+
+
+/* =========================================================
+   MESSAGE ID
+========================================================= */
+
+function getMessageId(message){
+
+  return String(
+    message.id ||
+    [
+      message.timestamp || "",
+      message.nickname ||
+        message.username ||
+        "",
+      message.content ||
+        message.message ||
+        ""
+    ].join("|")
+  );
+
+}
+
+
+/* =========================================================
+   PARSE SUSPECT COMMAND
+========================================================= */
+
+/*
+ * 다음 형식을 모두 허용:
+ *
+ * /용의자 1번
+ * /용의자 2번
+ * /용의자 3
+ * /용의자1번
+ * /용의자1
+ * /용의자 1 번
+ *
+ * 숫자는 "용의자 번호"다.
+ */
+
+function parseSuspectCommand(content){
+
+  if(
+    typeof content !==
+    "string"
+  ){
+
+    return null;
+
+  }
+
+
+  const text =
+    content
+      .trim()
+      .replace(
+        /\s+/g,
+        " "
+      );
+
+
+  const match =
+    text.match(
+      /^\/용의자\s*(\d+)\s*번?$/i
+    );
+
+
+  if(!match){
+
+    return null;
+
+  }
+
+
+  const number =
+    Number(
+      match[1]
+    );
+
+
+  if(
+    !Number.isInteger(number) ||
+    number < 1
+  ){
+
+    return null;
+
+  }
+
+
+  return number;
+
+}
+
+
+/* =========================================================
+   PROCESS CHAT COMMANDS
+========================================================= */
+
+function processChatCommands(list){
+
+  if(
+    commandProcessing ||
+    !currentCase ||
+    caseFinished
+  ){
+
+    return;
+
+  }
+
+
+  commandProcessing =
+    true;
+
+
+  try{
+
+    /*
+     * 오래된 채팅부터 순서대로 확인
+     */
+    for(
+      const message
+      of list
+    ){
+
+      const id =
+        getMessageId(
+          message
+        );
+
+
+      /*
+       * 사건 생성 이전의 채팅
+       */
+      if(
+        commandStartIds.has(id)
+      ){
+
+        continue;
+
+      }
+
+
+      /*
+       * 이미 처리한 명령어
+       */
+      if(
+        processedCommandIds.has(id)
+      ){
+
+        continue;
+
+      }
+
+
+      const content =
+        message.content ||
+        message.message ||
+        "";
+
+
+      const suspectNumber =
+        parseSuspectCommand(
+          content
+        );
+
+
+      /*
+       * 일반 채팅
+       */
+      if(
+        suspectNumber === null
+      ){
+
+        continue;
+
+      }
+
+
+      /*
+       * 명령어는 처리 여부와 관계없이
+       * 다시 처리하지 않도록 기록
+       */
+      processedCommandIds.add(
+        id
+      );
+
+
+      /*
+       * 현재 용의자 수보다 큰 번호는 무시
+       */
+      const suspectButtons =
+        document.querySelectorAll(
+          ".suspect"
+        );
+
+
+      if(
+        suspectNumber >
+        suspectButtons.length
+      ){
+
+        console.warn(
+          `[후던챗] 존재하지 않는 용의자 번호: ${suspectNumber}`
+        );
+
+        continue;
+
+      }
+
+
+      /*
+       * 첫 번째 유효한 명령어를
+       * 실제 버튼 클릭과 동일하게 처리
+       */
+      const applied =
+        applySuspectCommand(
+          suspectNumber
+        );
+
+
+      if(applied){
+
+        console.log(
+          `[후던챗] 채팅 명령어 적용: /용의자 ${suspectNumber}번`
+        );
+
+        /*
+         * 사건이 끝났으면 더 이상 처리하지 않음
+         */
+        break;
+
+      }
+
+    }
+
+
+    /*
+     * Set이 너무 커지는 것을 방지
+     */
+    if(
+      processedCommandIds.size >
+      1000
+    ){
+
+      const values =
+        Array.from(
+          processedCommandIds
+        );
+
+
+      processedCommandIds =
+        new Set(
+          values.slice(-500)
+        );
+
+    }
+
+  }finally{
+
+    commandProcessing =
+      false;
+
+  }
+
+}
+
+
+/* =========================================================
+   APPLY SUSPECT COMMAND
+========================================================= */
+
+function applySuspectCommand(number){
+
+  if(
+    !currentCase ||
+    caseFinished
+  ){
+
+    return false;
+
+  }
+
+
+  const buttons =
+    document.querySelectorAll(
+      ".suspect"
+    );
+
+
+  if(!buttons.length){
+
+    return false;
+
+  }
+
+
+  const index =
+    number - 1;
+
+
+  if(
+    index < 0 ||
+    index >= buttons.length
+  ){
+
+    return false;
+
+  }
+
+
+  const button =
+    buttons[index];
+
+
+  if(!button){
+
+    return false;
+
+  }
+
+
+  if(button.disabled){
+
+    return false;
+
+  }
+
+
+  /*
+   * 실제 클릭과 완전히 동일하게 처리
+   */
+  button.click();
+
+
+  updateCommandStatus(
+    number,
+    button.dataset.name
+  );
+
+
+  return true;
+
+}
+
+
+/* =========================================================
+   COMMAND STATUS
+========================================================= */
+
+function updateCommandStatus(
+  number,
+  suspectName
+){
+
+  const status =
+    document.getElementById(
+      "commandStatus"
+    );
+
+
+  if(!status){
+
+    return;
+
+  }
+
+
+  status.innerHTML = `
+    시청자 선택:
+    <strong>
+      ${number}번 ${escapeHtml(suspectName)}
+    </strong>
+  `;
+
+}
+
+
+/* =========================================================
+   HERO START
+========================================================= */
+
+document
+  .getElementById(
+    "heroStart"
+  )
+  .onclick = () => {
+
+    document
+      .getElementById(
+        "open"
+      )
+      .scrollIntoView({
+
+        behavior:
+          "smooth",
+
+        block:
+          "center"
+
+      });
+
+  };
+
+
+/* =========================================================
+   LOAD SAVED CHAT
+========================================================= */
+
+async function loadHistory(){
+
+  try{
 
     const response =
       await fetch(
@@ -2822,7 +3167,7 @@ async () => {
       await response.json();
 
 
-    if (!response.ok) {
+    if(!response.ok){
 
       throw new Error(
         data.error ||
@@ -2832,57 +3177,24 @@ async () => {
     }
 
 
-    messages =
-      data.messages ||
-      [];
+    return data.messages || [];
 
-
-    document
-      .getElementById(
-        "chatCount"
-      )
-      .textContent =
-        `채팅 ${messages.length}개`;
-
-
-    renderChat(
-      messages
-    );
-
-
-    document
-      .getElementById(
-        "liveStatus"
-      )
-      .textContent =
-      `저장된 채팅 ${messages.length}개를 불러왔습니다.`;
-
-
-  } catch(error) {
+  }catch(error){
 
     console.error(
+      "채팅 내역 오류:",
       error
     );
 
-    alert(
-      error.message
-    );
-
-  } finally {
-
-    button.disabled =
-      false;
-
-    button.textContent =
-      "저장된 채팅 내역 불러오기";
+    return [];
 
   }
 
-};
+}
 
 
 /* =========================================================
-   사건 만들기
+   CREATE CASE
 ========================================================= */
 
 document
@@ -2898,75 +3210,66 @@ async () => {
     );
 
 
+  if(!loggedIn){
+
+    alert(
+      "먼저 치지직 로그인을 해주세요."
+    );
+
+    return;
+
+  }
+
+
   button.disabled =
     true;
 
+
   button.textContent =
-    "저장된 채팅을 불러오는 중...";
+    "채팅을 분석하는 중...";
 
 
-  try {
+  try{
 
-    const historyResponse =
-      await fetch(
-        "/api/chat/history",
-        {
-          credentials:
-            "include"
-        }
-      );
-
-
-    const historyData =
-      await historyResponse.json();
-
-
-    if (
-      !historyResponse.ok
-    ) {
-
-      throw new Error(
-        historyData.error ||
-        "채팅 내역을 불러오지 못했습니다."
-      );
-
-    }
-
-
+    /*
+     * 저장된 채팅
+     */
     const savedMessages =
-      historyData.messages ||
-      [];
+      await loadHistory();
 
 
+    /*
+     * 현재 채팅 + 저장된 채팅
+     */
     const merged = [
       ...savedMessages,
       ...messages
     ];
 
 
+    /*
+     * 중복 제거
+     */
     const unique = [];
 
     const seen =
       new Set();
 
 
-    for (
+    for(
       const message
       of merged
-    ) {
+    ){
 
       const id =
-        message.id ||
-        [
-          message.timestamp,
-          message.nickname,
-          message.content
-        ].join("|");
+        getMessageId(
+          message
+        );
 
 
-      if (
+      if(
         seen.has(id)
-      ) {
+      ){
 
         continue;
 
@@ -2989,22 +3292,24 @@ async () => {
       unique;
 
 
-    if (
-      messages.length <
-      3
-    ) {
+    if(
+      messages.length < 3
+    ){
 
       throw new Error(
-        "저장된 채팅이 최소 3개 이상 필요합니다."
+        "사건을 만들려면 채팅이 최소 3개 이상 필요합니다."
       );
 
     }
 
 
     button.textContent =
-      "사건을 분석하고 있습니다...";
+      "오늘의 사건을 만드는 중...";
 
 
+    /*
+     * 서버 사건 생성
+     */
     const response =
       await fetch(
         "/api/case",
@@ -3016,11 +3321,9 @@ async () => {
           credentials:
             "include",
 
-          headers: {
-
+          headers:{
             "Content-Type":
               "application/json"
-
           },
 
           body:
@@ -3029,7 +3332,7 @@ async () => {
               messages,
 
               gameMode:
-                selectedGameMode,
+                "today",
 
               difficulty:
                 selectedDifficulty,
@@ -3047,7 +3350,7 @@ async () => {
       await response.json();
 
 
-    if (!response.ok) {
+    if(!response.ok){
 
       throw new Error(
         data.error ||
@@ -3058,8 +3361,8 @@ async () => {
 
 
     data.gameMode =
-      data.gameMode ||
-      selectedGameMode;
+      "today";
+
 
     data.difficulty =
       data.difficulty ||
@@ -3071,8 +3374,37 @@ async () => {
       selectedCaseType;
 
 
+    /*
+     * 사건 생성 직전까지의 채팅은
+     * 명령어로 처리하지 않음
+     */
+    commandStartIds =
+      new Set(
+        messages.map(
+          message =>
+            getMessageId(message)
+        )
+      );
+
+
+    processedCommandIds.clear();
+
+
+    caseFinished =
+      false;
+
+
+    currentCase =
+      data;
+
+
     renderCase(
       data
+    );
+
+
+    renderGameChat(
+      messages
     );
 
 
@@ -3102,7 +3434,7 @@ async () => {
     });
 
 
-  } catch(error) {
+  }catch(error){
 
     console.error(
       "사건 생성 오류:",
@@ -3115,12 +3447,15 @@ async () => {
       "사건을 생성하는 중 오류가 발생했습니다."
     );
 
-  } finally {
+
+  }finally{
 
     button.disabled =
       false;
 
-    updateGameModeUI();
+
+    button.textContent =
+      "오늘의 사건 만들기";
 
   }
 
@@ -3128,118 +3463,343 @@ async () => {
 
 
 /* =========================================================
-   사건 표시
+   RENDER CASE
 ========================================================= */
 
-function renderCase(
-  data
-){
+function renderCase(data){
 
-  currentCase = data;
-  unsolvedStage = 1;
+  currentCase =
+    data;
 
-  const suspects = data.suspects || [];
-  const difficulty = data.difficulty || selectedDifficulty;
-  const caseType = data.caseType || selectedCaseType;
-  const mode = data.gameMode || selectedGameMode;
 
-  document.getElementById("count").textContent = `용의자 ${suspects.length}명`;
-  document.getElementById("gameDifficulty").textContent = difficultyNames[difficulty] || difficulty;
-  document.getElementById("gameType").textContent = caseTypeNames[caseType] || caseType;
-  document.getElementById("brief").textContent = data.brief || "증거를 확인하고 범인을 찾아보세요.";
+  caseFinished =
+    false;
 
-  const exhibits = data.exhibits || [];
-  const progress = document.getElementById("unsolvedProgress");
-  const nextButton = document.getElementById("nextEvidence");
 
-  if(mode === "unsolved"){
-    progress.classList.remove("hidden");
-    nextButton.classList.remove("hidden");
-    renderUnsolvedStage();
-    nextButton.onclick = () => {
-      const stages = currentCase?.stages || [];
-      if(unsolvedStage < stages.length){
-        unsolvedStage += 1;
-        renderUnsolvedStage();
-      }
-    };
-  }else{
-    progress.classList.add("hidden");
-    nextButton.classList.add("hidden");
-    renderEvidence(exhibits);
-    renderSuspects(suspects, true);
-  }
+  const suspects =
+    Array.isArray(
+      data.suspects
+    )
+      ? data.suspects
+      : [];
+
+
+  const exhibits =
+    Array.isArray(
+      data.exhibits
+    )
+      ? data.exhibits
+      : [];
+
+
+  const difficulty =
+    data.difficulty ||
+    selectedDifficulty;
+
+
+  const caseType =
+    data.caseType ||
+    selectedCaseType;
+
+
+  document
+    .getElementById(
+      "count"
+    )
+    .textContent =
+      `용의자 ${suspects.length}명`;
+
+
+  document
+    .getElementById(
+      "gameDifficulty"
+    )
+    .textContent =
+      difficultyNames[
+        difficulty
+      ] ||
+      difficulty;
+
+
+  document
+    .getElementById(
+      "gameType"
+    )
+    .textContent =
+      caseTypeNames[
+        caseType
+      ] ||
+      caseType;
+
+
+  document
+    .getElementById(
+      "brief"
+    )
+    .textContent =
+      data.brief ||
+      data.summary ||
+      "증거를 확인하고 범인을 찾아보세요.";
+
+
+  document
+    .getElementById(
+      "commandStatus"
+    )
+    .innerHTML = `
+      시청자가 채팅에서
+      <strong>/용의자 1번</strong>
+      형식으로 답을 제출할 수 있습니다.
+    `;
+
+
+  renderEvidence(
+    exhibits
+  );
+
+
+  renderSuspects(
+    suspects
+  );
+
 }
 
-function renderEvidence(exhibits){
-  document.getElementById("exhibits").innerHTML = exhibits
-    .slice(0,6)
-    .map((item,index) => `
-      <div class="evidence">
-        <div class="evidence-number">${escapeHtml(item.id || `E${index+1}`)}</div>
-        <div class="evidence-icon">🧩</div>
-        <div class="evidence-text">${escapeHtml(item.text || "")}</div>
-      </div>
-    `).join("");
-}
-
-function renderSuspects(suspects, enabled){
-  document.getElementById("choices").innerHTML = suspects.map(name => `
-    <button class="suspect" data-name="${escapeHtml(name)}" ${enabled ? "" : "disabled"}>
-      👤 ${escapeHtml(name)}
-    </button>
-  `).join("");
-
-  document.querySelectorAll(".suspect").forEach(button => {
-    button.onclick = () => {
-      if(button.disabled) return;
-      const selected = button.dataset.name;
-      const correct = selected === currentCase.suspect;
-
-      document.querySelectorAll(".suspect").forEach(item => item.disabled = true);
-      button.classList.add(correct ? "correct" : "wrong");
-      showResult(correct, currentCase.suspect);
-    };
-  });
-}
-
-function renderUnsolvedStage(){
-  const stages = currentCase?.stages || [];
-  const stage = stages[unsolvedStage - 1];
-
-  if(!stage){
-    renderEvidence(currentCase?.exhibits || []);
-    renderSuspects(currentCase?.suspects || [], true);
-    document.getElementById("unsolvedProgress").classList.add("hidden");
-    return;
-  }
-
-  const ids = new Set(stage.evidenceIds || []);
-  const visible = (currentCase.exhibits || []).filter(item => ids.has(item.id));
-  renderEvidence(visible);
-
-  const total = stages.length;
-  document.getElementById("unsolvedProgressText").textContent = `미제 사건 ${unsolvedStage} / ${total} 단계`;
-  document.getElementById("unsolvedProgressHint").textContent = stage.hint || "새로운 증거를 확인하고 기존 단서와 연결해 보세요.";
-
-  const nextButton = document.getElementById("nextEvidence");
-  if(unsolvedStage >= total){
-    nextButton.textContent = "모든 단서 확인 완료 — 범인 지목하기";
-    nextButton.onclick = () => {
-      nextButton.classList.add("hidden");
-      document.getElementById("unsolvedProgressHint").textContent = currentCase.finalClue || "모든 증거를 종합해 범인을 지목하세요.";
-      renderEvidence(currentCase.exhibits || []);
-      renderSuspects(currentCase.suspects || [], true);
-    };
-  }else{
-    nextButton.classList.remove("hidden");
-    nextButton.textContent = "다음 단서 확인";
-    renderSuspects(currentCase.suspects || [], false);
-  }
-}
 
 /* =========================================================
-   결과 표시
+   EVIDENCE
+========================================================= */
+
+function renderEvidence(exhibits){
+
+  const container =
+    document.getElementById(
+      "exhibits"
+    );
+
+
+  if(!exhibits.length){
+
+    container.innerHTML = `
+      <div
+        class="evidence"
+        style="grid-column:1/-1;"
+      >
+
+        <div class="evidence-number">
+          EVIDENCE
+        </div>
+
+        <div class="evidence-icon">
+          🧩
+        </div>
+
+        <div class="evidence-text">
+          아직 표시할 증거가 없습니다.
+        </div>
+
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    exhibits
+      .slice(0,6)
+      .map(
+        (item,index) => {
+
+          const id =
+            item.id ||
+            `E${index + 1}`;
+
+
+          const text =
+            item.text ||
+            item.description ||
+            item.content ||
+            "";
+
+
+          return `
+            <div class="evidence">
+
+              <div class="evidence-number">
+                ${escapeHtml(id)}
+              </div>
+
+              <div class="evidence-icon">
+                🧩
+              </div>
+
+              <div class="evidence-text">
+                ${escapeHtml(text)}
+              </div>
+
+            </div>
+          `;
+
+        }
+      )
+      .join("");
+
+}
+
+
+/* =========================================================
+   SUSPECTS
+========================================================= */
+
+function renderSuspects(suspects){
+
+  const container =
+    document.getElementById(
+      "choices"
+    );
+
+
+  if(!suspects.length){
+
+    container.innerHTML = `
+      <div
+        style="
+          grid-column:1/-1;
+          padding:25px;
+          text-align:center;
+          color:#555;
+          border:1px solid #292929;
+          border-radius:7px;
+        "
+      >
+        용의자 정보를 불러오지 못했습니다.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    suspects
+      .map(
+        (name,index) => {
+
+          const safeName =
+            escapeHtml(
+              name
+            );
+
+
+          /*
+           * 용의자 번호는
+           * suspects 배열 순서로 자동 부여
+           */
+          return `
+            <button
+              type="button"
+              class="suspect"
+              data-name="${safeName}"
+              data-index="${index + 1}"
+            >
+
+              <span class="suspect-number">
+                용의자 ${index + 1}번
+              </span>
+
+              👤 ${safeName}
+
+            </button>
+          `;
+
+        }
+      )
+      .join("");
+
+
+  document
+    .querySelectorAll(
+      ".suspect"
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          () => {
+
+            if(
+              button.disabled ||
+              caseFinished
+            ){
+
+              return;
+
+            }
+
+
+            const selected =
+              button.dataset.name;
+
+
+            const correct =
+              selected ===
+              String(
+                currentCase?.suspect ||
+                currentCase?.answer ||
+                ""
+              );
+
+
+            /*
+             * 사건 종료
+             */
+            caseFinished =
+              true;
+
+
+            /*
+             * 모든 용의자 버튼 잠금
+             */
+            document
+              .querySelectorAll(
+                ".suspect"
+              )
+              .forEach(
+                item => {
+
+                  item.disabled =
+                    true;
+
+                }
+              );
+
+
+            button.classList.add(
+              correct
+                ? "correct"
+                : "wrong"
+            );
+
+
+            showResult(
+              correct,
+              currentCase?.suspect ||
+              currentCase?.answer ||
+              "알 수 없음"
+            );
+
+          };
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   RESULT
 ========================================================= */
 
 function showResult(
@@ -3295,19 +3855,23 @@ function showResult(
       : "result-modal fail";
 
 
-  if (success) {
+  if(success){
 
     icon.textContent =
       "✓";
 
+
     kicker.textContent =
       "INVESTIGATION COMPLETE";
+
 
     title.textContent =
       "사건 해결!";
 
+
     description.textContent =
       "정확하게 범인을 찾아냈습니다.";
+
 
     answerBox.innerHTML = `
       범인은
@@ -3317,19 +3881,23 @@ function showResult(
       입니다.
     `;
 
-  } else {
+  }else{
 
     icon.textContent =
       "×";
 
+
     kicker.textContent =
       "INVESTIGATION FAILED";
+
 
     title.textContent =
       "수사 실패";
 
+
     description.textContent =
-      "선택한 용의자가 범인이 아닙니다. 증거를 다시 살펴보세요.";
+      "선택한 용의자가 범인이 아닙니다.";
+
 
     answerBox.innerHTML = `
       진짜 범인은
@@ -3342,15 +3910,17 @@ function showResult(
   }
 
 
-  overlay.classList.remove(
-    "hidden"
-  );
+  overlay
+    .classList
+    .remove(
+      "hidden"
+    );
 
 }
 
 
 /* =========================================================
-   결과 닫기
+   RESULT CLOSE
 ========================================================= */
 
 document
@@ -3365,13 +3935,15 @@ document
         "resultOverlay"
       )
       .classList
-      .add("hidden");
+      .add(
+        "hidden"
+      );
 
   };
 
 
 /* =========================================================
-   결과 오버레이 바깥 클릭
+   RESULT OUTSIDE CLICK
 ========================================================= */
 
 document
@@ -3381,14 +3953,16 @@ document
   .onclick =
   event => {
 
-    if (
+    if(
       event.target.id ===
       "resultOverlay"
-    ) {
+    ){
 
       event.currentTarget
         .classList
-        .add("hidden");
+        .add(
+          "hidden"
+        );
 
     }
 
@@ -3396,24 +3970,26 @@ document
 
 
 /* =========================================================
-   ESC로 결과 닫기
+   ESC
 ========================================================= */
 
 document.addEventListener(
   "keydown",
   event => {
 
-    if (
+    if(
       event.key ===
       "Escape"
-    ) {
+    ){
 
       document
         .getElementById(
           "resultOverlay"
         )
         .classList
-        .add("hidden");
+        .add(
+          "hidden"
+        );
 
     }
 
@@ -3422,7 +3998,7 @@ document.addEventListener(
 
 
 /* =========================================================
-   뒤로가기
+   BACK
 ========================================================= */
 
 document
@@ -3432,12 +4008,31 @@ document
   .onclick =
   () => {
 
+    /*
+     * 사건 상태 초기화
+     */
+    currentCase =
+      null;
+
+
+    caseFinished =
+      false;
+
+
+    commandStartIds.clear();
+
+
+    processedCommandIds.clear();
+
+
     document
       .getElementById(
         "game"
       )
       .classList
-      .add("hidden");
+      .add(
+        "hidden"
+      );
 
 
     document
@@ -3445,7 +4040,9 @@ document
         "home"
       )
       .classList
-      .remove("hidden");
+      .remove(
+        "hidden"
+      );
 
 
     document
@@ -3453,7 +4050,9 @@ document
         "resultOverlay"
       )
       .classList
-      .add("hidden");
+      .add(
+        "hidden"
+      );
 
 
     window.scrollTo({
@@ -3472,9 +4071,7 @@ document
    HTML ESCAPE
 ========================================================= */
 
-function escapeHtml(
-  value
-){
+function escapeHtml(value){
 
   return String(
     value ?? ""
@@ -3514,7 +4111,7 @@ function escapeHtml(
 
 
 /* =========================================================
-   시작
+   START
 ========================================================= */
 
 checkLogin();

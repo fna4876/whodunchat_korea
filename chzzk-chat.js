@@ -51,9 +51,6 @@ export class ChzzkChat {
      * =====================================================
      * 중복 채팅 방지
      * =====================================================
-     *
-     * 같은 CHAT 이벤트가 여러 번 들어와도
-     * 동일한 message.id는 한 번만 처리한다.
      */
 
     this.recentMessageIds =
@@ -73,7 +70,6 @@ export class ChzzkChat {
       throw new Error(
         "Access Token이 없습니다."
       );
-
     }
 
 
@@ -82,7 +78,6 @@ export class ChzzkChat {
       throw new Error(
         "Channel ID가 없습니다."
       );
-
     }
 
 
@@ -317,6 +312,7 @@ export class ChzzkChat {
 
           } catch {}
 
+
           this.socket =
             null;
 
@@ -324,7 +320,7 @@ export class ChzzkChat {
 
 
         /*
-         * CHZZK Socket.IO 2.x
+         * CHZZK Socket.IO
          */
 
         const socket =
@@ -447,7 +443,6 @@ export class ChzzkChat {
                 );
 
                 return;
-
               }
 
 
@@ -546,7 +541,6 @@ export class ChzzkChat {
 
                 subscribed =
                   true;
-
 
                 this.subscribed =
                   true;
@@ -655,6 +649,7 @@ export class ChzzkChat {
                 messageTime,
 
                 content
+
               ].join("-");
 
 
@@ -681,13 +676,8 @@ export class ChzzkChat {
 
             /*
              * =================================================
-             * ★ 중복 CHAT 이벤트 차단
+             * 중복 CHAT 이벤트 차단
              * =================================================
-             *
-             * 같은 채팅이 두 번 들어오면
-             * 동일한 message.id가 만들어진다.
-             *
-             * 이미 처리한 ID라면 여기서 끝낸다.
              */
 
             if (
@@ -706,10 +696,6 @@ export class ChzzkChat {
             }
 
 
-            /*
-             * 처음 들어온 메시지는 저장
-             */
-
             this.recentMessageIds.add(
               messageId
             );
@@ -717,7 +703,6 @@ export class ChzzkChat {
 
             /*
              * Set이 무한히 커지지 않도록
-             * 최대 5000개까지만 유지
              */
 
             if (
@@ -800,7 +785,7 @@ export class ChzzkChat {
 
 
             /*
-             * 우리가 직접 종료한 게 아니라면
+             * 직접 종료한 것이 아니면
              * 자동 재연결
              */
 
@@ -1027,6 +1012,172 @@ export class ChzzkChat {
 
 
   /* =======================================================
+     ★ 채팅 보내기
+  ======================================================= */
+
+  async sendChat(
+    message
+  ) {
+
+    const text =
+      String(
+        message ||
+        ""
+      ).trim();
+
+
+    if (!text) {
+
+      throw new Error(
+        "보낼 채팅 내용이 없습니다."
+      );
+
+    }
+
+
+    if (!this.accessToken) {
+
+      throw new Error(
+        "Access Token이 없습니다."
+      );
+
+    }
+
+
+    if (!this.channelId) {
+
+      throw new Error(
+        "Channel ID가 없습니다."
+      );
+
+    }
+
+
+    /*
+     * 현재 연결된 Socket이 없으면
+     * 채팅을 보낼 수 없다.
+     */
+
+    if (
+      !this.socket ||
+      !this.connected
+    ) {
+
+      throw new Error(
+        "치지직 채팅 Socket이 연결되어 있지 않습니다."
+      );
+
+    }
+
+
+    /*
+     * CHZZK Open API의 채팅 메시지 전송
+     *
+     * 주의:
+     * 실제 API 응답 형식이 변경될 수 있으므로
+     * 성공/실패 응답을 모두 검사한다.
+     */
+
+    const response =
+      await fetch(
+        `${CHZZK_API}/open/v1/chats`,
+        {
+
+          method:
+            "POST",
+
+          headers: {
+
+            Accept:
+              "application/json",
+
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${this.accessToken}`
+
+          },
+
+          body:
+            JSON.stringify({
+
+              channelId:
+                this.channelId,
+
+              content:
+                text
+
+            })
+
+        }
+      );
+
+
+    const responseText =
+      await response.text();
+
+
+    let data =
+      null;
+
+
+    try {
+
+      data =
+        responseText
+          ? JSON.parse(
+              responseText
+            )
+          : null;
+
+    } catch {}
+
+
+    if (!response.ok) {
+
+      console.error(
+        "❌ 치지직 채팅 전송 실패:",
+        response.status,
+        responseText
+      );
+
+
+      throw new Error(
+        data?.message ||
+        data?.error ||
+        `치지직 채팅 전송 실패: HTTP ${response.status} ${responseText}`
+      );
+
+    }
+
+
+    console.log(
+      "📤 치지직 채팅 전송:",
+      text
+    );
+
+
+    this.onStatus(
+      `📤 채팅 전송 완료: ${text}`
+    );
+
+
+    return {
+
+      ok: true,
+
+      status:
+        response.status,
+
+      data
+
+    };
+
+  }
+
+
+  /* =======================================================
      자동 재연결
   ======================================================= */
 
@@ -1078,7 +1229,6 @@ export class ChzzkChat {
             this.sessionKey =
               null;
 
-
             this.subscribed =
               false;
 
@@ -1114,10 +1264,78 @@ export class ChzzkChat {
 
 
   /* =======================================================
+     연결 종료
+  ======================================================= */
+
+  disconnect() {
+
+    this.closed =
+      true;
+
+
+    this.connected =
+      false;
+
+    this.subscribed =
+      false;
+
+
+    if (
+      this.reconnectTimer
+    ) {
+
+      clearTimeout(
+        this.reconnectTimer
+      );
+
+      this.reconnectTimer =
+        null;
+
+    }
+
+
+    if (this.socket) {
+
+      try {
+
+        this.socket.disconnect();
+
+      } catch {}
+
+
+      this.socket =
+        null;
+
+    }
+
+
+    this.sessionKey =
+      null;
+
+
+    this.connecting =
+      false;
+
+
+    this.onStatus(
+      "치지직 채팅 연결 종료"
+    );
+
+
+    console.log(
+      "🛑 ChzzkChat disconnect()"
+    );
+
+  }
+
+
+  /* =======================================================
      데이터 정리
   ======================================================= */
 
-  normalizeData(raw) {
+  normalizeData(
+    raw
+  ) {
 
     let data =
       raw;
@@ -1154,16 +1372,17 @@ export class ChzzkChat {
             data
           );
 
-        } catch (error) {
+      } catch (error) {
 
-          console.error(
-            "❌ CHZZK JSON 파싱 실패:",
-            data
-          );
+        console.error(
+          "❌ CHZZK JSON 파싱 실패:",
+          data
+        );
 
-          return null;
 
-        }
+        return null;
+
+      }
 
     }
 

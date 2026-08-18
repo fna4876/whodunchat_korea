@@ -90,7 +90,9 @@ const liveWatchers = new Map();
 
 const chatHistories = new Map();
 
-const activeCases = new Map();
+const contentSessions = new Map();
+
+const restoredAccounts = new Map();
 
 const MAX_HISTORY = 10000;
 
@@ -123,29 +125,21 @@ app.use(
 
 app.use(
   session({
+    secret: SESSION_SECRET,
 
-    secret:
-      SESSION_SECRET,
+    resave: false,
 
-    resave:
-      false,
+    saveUninitialized: false,
 
-    saveUninitialized:
-      false,
-
-    rolling:
-      true,
+    rolling: true,
 
     cookie: {
-
-      httpOnly:
-        true,
+      httpOnly: true,
 
       secure:
-        true,
+        process.env.NODE_ENV === "production",
 
-      sameSite:
-        "lax",
+      sameSite: "lax",
 
       maxAge:
         1000 *
@@ -153,9 +147,7 @@ app.use(
         60 *
         24 *
         30
-
     }
-
   })
 );
 
@@ -175,18 +167,16 @@ if (
     publicPath
   )
 ) {
-
   app.use(
     express.static(
       publicPath
     )
   );
-
 }
 
 
 /* =========================================================
-   환경변수 로그
+   환경변수 확인
 ========================================================= */
 
 console.log("");
@@ -224,6 +214,16 @@ console.log(
   CHZZK_REDIRECT_URI
 );
 
+console.log(
+  "OpenAI Key 존재:",
+  !!process.env.OPENAI_API_KEY
+);
+
+console.log(
+  "OpenAI Model:",
+  process.env.OPENAI_MODEL || "gpt-5-mini"
+);
+
 console.log("=================================");
 console.log("");
 
@@ -233,23 +233,19 @@ console.log("");
 ========================================================= */
 
 function getChannelId(req) {
-
   return (
     req.session?.channelId ||
     req.session?.user?.channelId ||
     null
   );
-
 }
 
 
 function getAccessToken(req) {
-
   return (
     req.session?.accessToken ||
     null
   );
-
 }
 
 
@@ -258,28 +254,316 @@ function requireLogin(
   res,
   next
 ) {
-
   if (
     !req.session?.accessToken
   ) {
-
     return res.status(401).json({
-
-      ok:
-        false,
-
-      loggedIn:
-        false,
-
-      message:
-        "로그인이 필요합니다."
-
+      ok: false,
+      loggedIn: false,
+      message: "로그인이 필요합니다."
     });
-
   }
 
   next();
+}
 
+
+function sleep(ms) {
+  return new Promise(
+    resolve => setTimeout(
+      resolve,
+      ms
+    )
+  );
+}
+
+
+/* =========================================================
+   PostgreSQL
+========================================================= */
+
+async function testDatabase() {
+
+  if (!process.env.DATABASE_URL) {
+
+    console.warn(
+      "⚠️ DATABASE_URL이 없습니다."
+    );
+
+    return false;
+  }
+
+  try {
+
+    const result =
+      await pool.query(
+        "SELECT NOW() AS now"
+      );
+
+    console.log(
+      "✅ PostgreSQL 연결 성공:",
+      result.rows[0]?.now
+    );
+
+    return true;
+
+  } catch (error) {
+
+    console.error(
+      "❌ PostgreSQL 연결 실패:",
+      error.message
+    );
+
+    return false;
+  }
+}
+
+
+async function initDatabase() {
+
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  try {
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chzzk_accounts (
+        channel_id TEXT PRIMARY KEY,
+        user_data JSONB,
+        access_token TEXT,
+        refresh_token TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    console.log(
+      "✅ chzzk_accounts 테이블 확인 완료"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ PostgreSQL 테이블 초기화 실패:",
+      error.message
+    );
+  }
+}
+
+
+async function restoreSavedAccounts() {
+
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  try {
+
+    const result =
+      await pool.query(`
+        SELECT
+          channel_id,
+          user_data,
+          access_token,
+          refresh_token
+        FROM chzzk_accounts
+      `);
+
+    for (
+      const row
+      of result.rows
+    ) {
+
+      if (!row.channel_id) {
+        continue;
+      }
+
+      restoredAccounts.set(
+        row.channel_id,
+        {
+          channelId:
+            row.channel_id,
+
+          user:
+            row.user_data || null,
+
+          accessToken:
+            row.access_token || null,
+
+          refreshToken:
+            row.refresh_token || null
+        }
+      );
+
+      if (
+        !chatHistories.has(
+          row.channel_id
+        )
+      ) {
+
+        chatHistories.set(
+          row.channel_id,
+          []
+        );
+      }
+    }
+
+    console.log(
+      `💾 저장된 치지직 계정 ${result.rows.length}개 복구`
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ 저장된 계정 복구 실패:",
+      error.message
+    );
+  }
+}
+
+
+/* =========================================================
+   콘텐츠 세션
+========================================================= */
+
+function getContentSession(
+  channelId
+) {
+
+  if (!channelId) {
+    return null;
+  }
+
+  return (
+    contentSessions.get(
+      channelId
+    ) ||
+    null
+  );
+}
+
+
+function isContentActive(
+  channelId
+) {
+
+  const content =
+    getContentSession(
+      channelId
+    );
+
+  return !!content?.active;
+}
+
+
+function startContentSession(
+  channelId
+) {
+
+  if (!channelId) {
+    throw new Error(
+      "채널 ID가 없습니다."
+    );
+  }
+
+  const existing =
+    getContentSession(
+      channelId
+    );
+
+  if (
+    existing?.active
+  ) {
+    return existing;
+  }
+
+  const content = {
+
+    channelId,
+
+    active: true,
+
+    startedAt:
+      Date.now(),
+
+    startedCaseCount:
+      0,
+
+    currentCaseId:
+      null,
+
+    currentCase:
+      null,
+
+    /*
+     * 현재 사건을 이미 정답 처리했는지
+     */
+    solved:
+      false
+
+  };
+
+  contentSessions.set(
+    channelId,
+    content
+  );
+
+  console.log("");
+  console.log(
+    "================================="
+  );
+
+  console.log(
+    "🔎 후던챗 콘텐츠 시작"
+  );
+
+  console.log(
+    "채널:",
+    channelId
+  );
+
+  console.log(
+    "================================="
+  );
+  console.log("");
+
+  return content;
+}
+
+
+function stopContentSession(
+  channelId
+) {
+
+  if (!channelId) {
+    return null;
+  }
+
+  const content =
+    getContentSession(
+      channelId
+    );
+
+  if (!content) {
+    return null;
+  }
+
+  content.active = false;
+
+  content.currentCaseId = null;
+
+  content.currentCase = null;
+
+  contentSessions.delete(
+    channelId
+  );
+
+  console.log(
+    "🛑 후던챗 콘텐츠 종료:",
+    channelId
+  );
+
+  return content;
 }
 
 
@@ -299,26 +583,20 @@ function saveSession(req) {
         error => {
 
           if (error) {
-
             reject(error);
-
             return;
-
           }
 
           resolve();
-
         }
       );
-
     }
   );
-
 }
 
 
 /* =========================================================
-   채팅 기록 저장
+   채팅 기록
 ========================================================= */
 
 function saveChatMessage(
@@ -343,31 +621,24 @@ function saveChatMessage(
       channelId,
       history
     );
-
   }
-
 
   const messageId =
     message?.id;
-
 
   if (
     messageId &&
     history.some(
       item =>
-        item.id === messageId
+        item?.id === messageId
     )
   ) {
-
     return;
-
   }
-
 
   history.push(
     message
   );
-
 
   if (
     history.length >
@@ -379,15 +650,9 @@ function saveChatMessage(
       history.length -
         MAX_HISTORY
     );
-
   }
-
 }
 
-
-/* =========================================================
-   채널별 채팅 기록
-========================================================= */
 
 function getChatHistory(
   channelId
@@ -403,12 +668,603 @@ function getChatHistory(
     ) ||
     []
   );
-
 }
 
 
 /* =========================================================
-   치지직 API 요청
+   ★ 후던챗 채팅 답변
+========================================================= */
+
+/*
+ * 실제 치지직 채팅창으로 답변한다.
+ *
+ * chzzk-chat.js의 sendChat()을 사용한다.
+ */
+
+async function sendBotMessage(
+  channelId,
+  message
+) {
+
+  const text =
+    String(
+      message ||
+      ""
+    ).trim();
+
+  if (!text) {
+    return false;
+  }
+
+  const connection =
+    chatConnections.get(
+      channelId
+    );
+
+  if (
+    !connection?.chat
+  ) {
+
+    console.warn(
+      "⚠️ 채팅 연결이 없어 봇 메시지를 보낼 수 없습니다."
+    );
+
+    return false;
+  }
+
+  if (
+    !connection.collecting
+  ) {
+
+    console.warn(
+      "⚠️ 채팅 수집 상태가 아니어서 봇 메시지를 보내지 않습니다."
+    );
+
+    return false;
+  }
+
+  try {
+
+    await connection.chat.sendChat(
+      text
+    );
+
+    return true;
+
+  } catch (error) {
+
+    console.error(
+      "❌ 후던챗 채팅 답변 실패:",
+      error.message
+    );
+
+    return false;
+  }
+}
+
+
+/*
+ * 치지직 채팅은 너무 길면 읽기 힘들기 때문에
+ * 여러 메시지로 나눠서 전송한다.
+ */
+
+async function sendBotMessages(
+  channelId,
+  messages
+) {
+
+  const list =
+    Array.isArray(messages)
+      ? messages
+      : [messages];
+
+  for (
+    const message
+    of list
+  ) {
+
+    const text =
+      String(
+        message ||
+        ""
+      ).trim();
+
+    if (!text) {
+      continue;
+    }
+
+    await sendBotMessage(
+      channelId,
+      text
+    );
+
+    /*
+     * 연속 메시지 도배 방지
+     */
+    await sleep(800);
+  }
+}
+
+
+/* =========================================================
+   ★ 명령어 파싱
+========================================================= */
+
+function parseCommand(
+  text
+) {
+
+  const value =
+    String(
+      text ||
+      ""
+    ).trim();
+
+  if (!value.startsWith("/")) {
+    return null;
+  }
+
+  const parts =
+    value.split(
+      /\s+/
+    );
+
+  const command =
+    parts[0]
+      .toLowerCase();
+
+  const argument =
+    parts
+      .slice(1)
+      .join(" ")
+      .trim();
+
+  return {
+    command,
+    argument,
+    raw: value
+  };
+}
+
+
+function parseNumber(
+  text
+) {
+
+  const match =
+    String(
+      text ||
+      ""
+    ).match(
+      /(\d+)/
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const number =
+    Number(
+      match[1]
+    );
+
+  if (
+    !Number.isInteger(
+      number
+    ) ||
+    number < 1
+  ) {
+    return null;
+  }
+
+  return number;
+}
+
+
+/* =========================================================
+   ★ 현재 사건 명령어 처리
+========================================================= */
+
+async function handleChatCommand(
+  channelId,
+  message
+) {
+
+  const parsed =
+    parseCommand(
+      message?.content
+    );
+
+  if (!parsed) {
+    return false;
+  }
+
+  const {
+    command,
+    argument
+  } = parsed;
+
+  /*
+   * 명령어가 아닌 슬래시 메시지는 무시
+   */
+  const supportedCommands = new Set([
+    "/사건",
+    "/용의자",
+    "/증거",
+    "/추리",
+    "/도움말",
+    "/정답"
+  ]);
+
+  if (
+    !supportedCommands.has(
+      command
+    )
+  ) {
+    return false;
+  }
+
+  console.log(
+    `🤖 명령어 감지: ${message?.nickname || "익명"} → ${parsed.raw}`
+  );
+
+
+  /* =======================================================
+     콘텐츠 확인
+  ======================================================= */
+
+  const content =
+    getContentSession(
+      channelId
+    );
+
+  if (
+    !content?.active
+  ) {
+
+    await sendBotMessage(
+      channelId,
+      "🔎 현재 진행 중인 후던챗 사건이 없습니다."
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     /도움말
+  ======================================================= */
+
+  if (
+    command === "/도움말"
+  ) {
+
+    await sendBotMessages(
+      channelId,
+      [
+        "🕵️ 후던챗 명령어",
+        "/사건 - 현재 사건 확인 | /용의자 1번 - 용의자 확인 | /증거 1번 - 증거 확인",
+        "/추리 - 현재 추리 과정 | /정답 - 범인 공개 | /도움말 - 명령어 안내"
+      ]
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     현재 사건 확인
+  ======================================================= */
+
+  const currentCase =
+    content.currentCase;
+
+  if (!currentCase) {
+
+    await sendBotMessage(
+      channelId,
+      "🕵️ 아직 생성된 사건이 없습니다. 방송 채팅을 모은 뒤 사건을 생성해주세요."
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     /사건
+  ======================================================= */
+
+  if (
+    command === "/사건"
+  ) {
+
+    const suspectCount =
+      Array.isArray(
+        currentCase.suspects
+      )
+        ? currentCase.suspects.length
+        : 0;
+
+    const exhibitCount =
+      Array.isArray(
+        currentCase.exhibits
+      )
+        ? currentCase.exhibits.length
+        : 0;
+
+    await sendBotMessages(
+      channelId,
+      [
+        `🕵️ 현재 사건: ${currentCase.brief || "사건 정보 없음"}`,
+        `용의자 ${suspectCount}명 / 공개 증거 ${exhibitCount}개`,
+        "명령어: /용의자 1번 /증거 1번 /추리 /정답 /도움말"
+      ]
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     /용의자
+  ======================================================= */
+
+  if (
+    command === "/용의자"
+  ) {
+
+    const number =
+      parseNumber(
+        argument
+      );
+
+    if (!number) {
+
+      await sendBotMessage(
+        channelId,
+        "🕵️ 사용법: /용의자 1번"
+      );
+
+      return true;
+    }
+
+    const suspects =
+      Array.isArray(
+        currentCase.suspects
+      )
+        ? currentCase.suspects
+        : [];
+
+    if (
+      number >
+      suspects.length
+    ) {
+
+      await sendBotMessage(
+        channelId,
+        `❌ ${number}번 용의자는 없습니다. 현재 용의자는 ${suspects.length}명입니다.`
+      );
+
+      return true;
+    }
+
+    const name =
+      suspects[
+        number - 1
+      ];
+
+    const reason =
+      currentCase
+        ?.suspectReasons
+        ?.[
+          name
+        ] ||
+      "현재 공개된 의심 정황이 없습니다.";
+
+    await sendBotMessages(
+      channelId,
+      [
+        `🕵️ 용의자 ${number}번: ${name}`,
+        `의심 정황: ${reason}`
+      ]
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     /증거
+  ======================================================= */
+
+  if (
+    command === "/증거"
+  ) {
+
+    const number =
+      parseNumber(
+        argument
+      );
+
+    if (!number) {
+
+      await sendBotMessage(
+        channelId,
+        "🔎 사용법: /증거 1번"
+      );
+
+      return true;
+    }
+
+    const exhibits =
+      Array.isArray(
+        currentCase.exhibits
+      )
+        ? currentCase.exhibits
+        : [];
+
+    const exhibit =
+      exhibits[
+        number - 1
+      ];
+
+    if (!exhibit) {
+
+      await sendBotMessage(
+        channelId,
+        `❌ ${number}번 증거가 없습니다. 현재 증거는 ${exhibits.length}개입니다.`
+      );
+
+      return true;
+    }
+
+    const related =
+      Array.isArray(
+        exhibit.relatedSuspects
+      ) &&
+      exhibit.relatedSuspects.length
+        ? exhibit.relatedSuspects.join(
+            ", "
+          )
+        : "특정되지 않음";
+
+    await sendBotMessages(
+      channelId,
+      [
+        `🔎 증거 ${exhibit.id}`,
+        `"${exhibit.text}"`,
+        `중요도: ${exhibit.importance || "정보 없음"}`,
+        `관련 용의자: ${related}`
+      ]
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     /추리
+  ======================================================= */
+
+  if (
+    command === "/추리"
+  ) {
+
+    const deduction =
+      Array.isArray(
+        currentCase.deduction
+      )
+        ? currentCase.deduction
+        : [];
+
+    if (!deduction.length) {
+
+      await sendBotMessage(
+        channelId,
+        "🔎 아직 공개된 추리 과정이 없습니다."
+      );
+
+      return true;
+    }
+
+    const messages =
+      [
+        "🧩 현재까지의 추리 과정"
+      ];
+
+    for (
+      let i = 0;
+      i < deduction.length;
+      i++
+    ) {
+
+      messages.push(
+        `${i + 1}. ${deduction[i]}`
+      );
+    }
+
+    await sendBotMessages(
+      channelId,
+      messages
+    );
+
+    return true;
+  }
+
+
+  /* =======================================================
+     /정답
+  ======================================================= */
+
+  if (
+    command === "/정답"
+  ) {
+
+    if (
+      content.solved
+    ) {
+
+      await sendBotMessage(
+        channelId,
+        `🔐 이 사건의 범인은 이미 공개되었습니다: ${currentCase.suspect}`
+      );
+
+      return true;
+    }
+
+    const suspect =
+      currentCase.suspect ||
+      "알 수 없음";
+
+    const culpritEvidence =
+      Array.isArray(
+        currentCase.culpritEvidence
+      )
+        ? currentCase.culpritEvidence.join(
+            ", "
+          )
+        : "없음";
+
+    const reason =
+      currentCase.culpritReason ||
+      "범인 결정 이유가 없습니다.";
+
+    const finalClue =
+      currentCase.finalClue ||
+      "";
+
+    await sendBotMessages(
+      channelId,
+      [
+        `🚨 정답 공개! 범인은 ${suspect}입니다.`,
+        `🔎 결정적 증거: ${culpritEvidence}`,
+        `🧩 이유: ${reason}`,
+        finalClue
+          ? `💡 결정적 단서: ${finalClue}`
+          : ""
+      ]
+    );
+
+    content.solved =
+      true;
+
+    /*
+     * 정답 공개 후에도 현재 사건 정보는
+     * API에서 확인할 수 있도록 유지한다.
+     *
+     * 다음 사건을 생성하면 자동으로 교체된다.
+     */
+
+    return true;
+  }
+
+
+  return false;
+}
+
+
+/* =========================================================
+   치지직 API
 ========================================================= */
 
 async function chzzkFetch(
@@ -418,17 +1274,17 @@ async function chzzkFetch(
 ) {
 
   const headers = {
+    Accept:
+      "application/json",
+
     ...(options.headers || {})
   };
-
 
   if (accessToken) {
 
     headers.Authorization =
       `Bearer ${accessToken}`;
-
   }
-
 
   const response =
     await fetch(
@@ -439,13 +1295,10 @@ async function chzzkFetch(
       }
     );
 
-
   const text =
     await response.text();
 
-
   let data = null;
-
 
   try {
 
@@ -454,12 +1307,7 @@ async function chzzkFetch(
         ? JSON.parse(text)
         : null;
 
-  } catch {
-
-    data = null;
-
-  }
-
+  } catch {}
 
   if (!response.ok) {
 
@@ -469,21 +1317,17 @@ async function chzzkFetch(
       text ||
       `HTTP ${response.status}`;
 
-
     throw new Error(
       `치지직 API 오류: ${message}`
     );
-
   }
 
-
   return data;
-
 }
 
 
 /* =========================================================
-   현재 로그인 사용자
+   현재 사용자
 ========================================================= */
 
 async function getCurrentUser(
@@ -496,27 +1340,15 @@ async function getCurrentUser(
       accessToken
     );
 
-
-  console.log(
-    "👤 사용자 정보:",
-    JSON.stringify(
-      data,
-      null,
-      2
-    )
-  );
-
-
   return (
     data?.content ||
     data
   );
-
 }
 
 
 /* =========================================================
-   채널 ID 확인
+   채널 ID
 ========================================================= */
 
 async function resolveChannelId(
@@ -528,36 +1360,28 @@ async function resolveChannelId(
       accessToken
     );
 
-
   const channelId =
     user?.channelId ||
     user?.channel?.channelId ||
     user?.channel?.id ||
     null;
 
-
   if (!channelId) {
 
     throw new Error(
       "로그인은 성공했지만 채널 ID를 확인하지 못했습니다."
     );
-
   }
 
-
   return {
-
     channelId,
-
     user
-
   };
-
 }
 
 
 /* =========================================================
-   현재 방송 조회
+   방송 상태
 ========================================================= */
 
 async function getCurrentLive(
@@ -565,25 +1389,11 @@ async function getCurrentLive(
 ) {
 
   if (!channelId) {
-
-    console.log(
-      "⚠️ channelId가 없어 방송 상태를 확인할 수 없습니다."
-    );
-
     return null;
-
   }
-
 
   const url =
     `https://api.chzzk.naver.com/service/v2/channels/${encodeURIComponent(channelId)}/live-detail`;
-
-
-  console.log(
-    "📡 로그인한 채널 방송 상태 조회:",
-    channelId
-  );
-
 
   try {
 
@@ -591,48 +1401,26 @@ async function getCurrentLive(
       await fetch(
         url,
         {
-
-          method:
-            "GET",
+          method: "GET",
 
           headers: {
-
             Accept:
               "application/json",
 
             "User-Agent":
               "Mozilla/5.0"
-
           }
-
         }
       );
-
 
     const text =
       await response.text();
 
-
-    console.log(
-      "📡 방송 상태 HTTP:",
-      response.status
-    );
-
-
     if (!response.ok) {
-
-      console.log(
-        "⚫ 해당 채널 방송 정보 없음:",
-        response.status
-      );
-
       return null;
-
     }
 
-
     let data = null;
-
 
     try {
 
@@ -643,48 +1431,21 @@ async function getCurrentLive(
 
     } catch {
 
-      console.error(
-        "❌ 방송 상태 JSON 파싱 실패:",
-        text
-      );
-
       return null;
-
     }
-
-
-    console.log(
-      "📡 방송 상세 응답:",
-      JSON.stringify(
-        data,
-        null,
-        2
-      )
-    );
-
 
     const content =
       data?.content ||
       null;
 
-
     if (!content) {
-
-      console.log(
-        "⚫ 현재 방송 중이 아닙니다:",
-        channelId
-      );
-
       return null;
-
     }
-
 
     const live =
       content?.liveDetail ||
       content?.live ||
       content;
-
 
     const liveId =
       live?.liveId ||
@@ -692,34 +1453,11 @@ async function getCurrentLive(
       live?.id ||
       null;
 
-
     if (!liveId) {
-
-      console.log(
-        "⚫ 방송 정보는 응답됐지만 liveId가 없습니다."
-      );
-
       return null;
-
     }
 
-
-    console.log(
-      "🔴 로그인한 채널 방송 발견:",
-      live?.liveTitle ||
-      live?.title ||
-      "(제목 없음)"
-    );
-
-
-    console.log(
-      "📺 Live ID:",
-      liveId
-    );
-
-
     return normalizeLive({
-
       ...live,
 
       liveId,
@@ -727,20 +1465,17 @@ async function getCurrentLive(
       channelId:
         live?.channelId ||
         channelId
-
     });
 
   } catch (error) {
 
     console.error(
-      "❌ 특정 채널 방송 상태 조회 실패:",
+      "❌ 방송 상태 조회 실패:",
       error.message
     );
 
     return null;
-
   }
-
 }
 
 
@@ -755,7 +1490,6 @@ function normalizeLive(
   if (!live) {
     return null;
   }
-
 
   return {
 
@@ -801,14 +1535,12 @@ function normalizeLive(
 
     raw:
       live
-
   };
-
 }
 
 
 /* =========================================================
-   채팅 수집 시작
+   ★ 채팅 수집
 ========================================================= */
 
 async function startChatCollection(
@@ -816,83 +1548,44 @@ async function startChatCollection(
 ) {
 
   const channelId =
-    getChannelId(
-      req
-    );
+    getChannelId(req);
 
   const accessToken =
-    getAccessToken(
-      req
-    );
-
+    getAccessToken(req);
 
   if (!channelId) {
-
     throw new Error(
       "채널 ID가 없습니다."
     );
-
   }
 
-
   if (!accessToken) {
-
     throw new Error(
       "Access Token이 없습니다."
     );
-
   }
-
 
   const existing =
     chatConnections.get(
       channelId
     );
 
-
   if (
-    existing &&
-    existing.collecting
+    existing?.collecting
   ) {
-
     return existing;
-
   }
-
 
   if (existing) {
 
     try {
-
       existing.chat?.disconnect();
-
     } catch {}
 
     chatConnections.delete(
       channelId
     );
-
   }
-
-
-  console.log("");
-  console.log(
-    "================================="
-  );
-
-  console.log(
-    "💬 채팅 연결 시작"
-  );
-
-  console.log(
-    "채널:",
-    channelId
-  );
-
-  console.log(
-    "================================="
-  );
-
 
   if (
     !chatHistories.has(
@@ -904,9 +1597,12 @@ async function startChatCollection(
       channelId,
       []
     );
-
   }
 
+  console.log(
+    "💬 채팅 연결 시작:",
+    channelId
+  );
 
   const chat =
     new ChzzkChat({
@@ -916,108 +1612,101 @@ async function startChatCollection(
       channelId,
 
       onChat:
-        message => {
+        async message => {
 
           const connection =
             chatConnections.get(
               channelId
             );
 
-
-          if (
-            connection
-          ) {
-
-            const messageId =
-              message?.id;
-
-
-            if (
-              messageId &&
-              connection.messages.some(
-                item =>
-                  item?.id === messageId
-              )
-            ) {
-
-              console.log(
-                `♻️ 중복 채팅 무시: ${messageId}`
-              );
-
-              return;
-
-            }
-
-
-            if (!messageId) {
-
-              const lastMessage =
-                connection.messages[
-                  connection.messages.length - 1
-                ];
-
-
-              if (
-                lastMessage &&
-                lastMessage.nickname ===
-                  message?.nickname &&
-                lastMessage.content ===
-                  message?.content &&
-                Math.abs(
-                  Number(
-                    lastMessage.timestamp ||
-                    0
-                  ) -
-                  Number(
-                    message?.timestamp ||
-                    0
-                  )
-                ) < 3000
-              ) {
-
-                console.log(
-                  "♻️ 중복 채팅 무시:",
-                  message?.nickname,
-                  message?.content
-                );
-
-                return;
-
-              }
-
-            }
-
-
-            connection.messages.push(
-              message
-            );
-
-
-            if (
-              connection.messages.length >
-              1000
-            ) {
-
-              connection.messages =
-                connection.messages.slice(
-                  -1000
-                );
-
-            }
-
+          if (!connection) {
+            return;
           }
 
+          const messageId =
+            message?.id;
+
+          if (
+            messageId &&
+            connection.messages.some(
+              item =>
+                item?.id ===
+                messageId
+            )
+          ) {
+            return;
+          }
+
+          if (!messageId) {
+
+            const last =
+              connection.messages[
+                connection.messages.length - 1
+              ];
+
+            if (
+              last &&
+              last.nickname ===
+                message?.nickname &&
+              last.content ===
+                message?.content &&
+              Math.abs(
+                Number(
+                  last.timestamp || 0
+                ) -
+                Number(
+                  message?.timestamp || 0
+                )
+              ) < 3000
+            ) {
+              return;
+            }
+          }
+
+          connection.messages.push(
+            message
+          );
+
+          if (
+            connection.messages.length >
+            1000
+          ) {
+
+            connection.messages =
+              connection.messages.slice(
+                -1000
+              );
+          }
 
           saveChatMessage(
             channelId,
             message
           );
 
-
           console.log(
-            `💬 [${channelId}] ${message.nickname}: ${message.content}`
+            `💬 [${channelId}] ${message?.nickname || "익명"}: ${message?.content || ""}`
           );
 
+
+          /* =================================================
+             ★ 후던챗 명령어 처리
+          ================================================= */
+
+          try {
+
+            await handleChatCommand(
+              channelId,
+              message
+            );
+
+          } catch (error) {
+
+            console.error(
+              "❌ 후던챗 명령어 처리 실패:",
+              error
+            );
+
+          }
         },
 
       onStatus:
@@ -1027,11 +1716,9 @@ async function startChatCollection(
             `[채팅 상태 ${channelId}]`,
             message
           );
-
         }
 
     });
-
 
   const connection = {
 
@@ -1047,26 +1734,21 @@ async function startChatCollection(
 
     messages:
       []
-
   };
-
 
   chatConnections.set(
     channelId,
     connection
   );
 
-
   try {
 
     await chat.connect();
 
-
     console.log(
-      "✅ 치지직 실시간 채팅 연결 완료:",
+      "✅ 실시간 채팅 연결 완료:",
       channelId
     );
-
 
     return connection;
 
@@ -1079,23 +1761,17 @@ async function startChatCollection(
       channelId
     );
 
-
     try {
-
       chat.disconnect();
-
     } catch {}
 
-
     throw error;
-
   }
-
 }
 
 
 /* =========================================================
-   채팅 수집 중지
+   채팅 중지
 ========================================================= */
 
 function stopChatCollection(
@@ -1103,52 +1779,263 @@ function stopChatCollection(
 ) {
 
   const channelId =
-    getChannelId(
-      req
-    );
-
+    getChannelId(req);
 
   if (!channelId) {
     return;
   }
 
+  stopChatCollectionByChannel(
+    channelId
+  );
+}
+
+
+function stopChatCollectionByChannel(
+  channelId
+) {
+
+  if (!channelId) {
+    return;
+  }
 
   const connection =
     chatConnections.get(
       channelId
     );
 
-
   if (!connection) {
     return;
   }
 
-
   connection.collecting =
     false;
 
-
   try {
-
     connection.chat?.disconnect();
-
   } catch {}
-
 
   chatConnections.delete(
     channelId
   );
 
-
   console.log(
     "💬 채팅 수집 종료:",
     channelId
   );
-
 }
 
+
 /* =========================================================
-   치지직 로그인
+   방송 감시
+========================================================= */
+
+async function startLiveWatcher(
+  req
+) {
+
+  const channelId =
+    getChannelId(req);
+
+  const accessToken =
+    getAccessToken(req);
+
+  if (!channelId) {
+    throw new Error(
+      "채널 ID가 없습니다."
+    );
+  }
+
+  if (!accessToken) {
+    throw new Error(
+      "Access Token이 없습니다."
+    );
+  }
+
+  const existing =
+    liveWatchers.get(
+      channelId
+    );
+
+  if (existing) {
+    return existing;
+  }
+
+  const watcher = {
+
+    channelId,
+
+    accessToken,
+
+    startedAt:
+      Date.now(),
+
+    timer:
+      null,
+
+    lastLiveId:
+      null,
+
+    isLive:
+      false
+  };
+
+  liveWatchers.set(
+    channelId,
+    watcher
+  );
+
+  console.log(
+    "📡 방송 자동 감시 시작:",
+    channelId
+  );
+
+  const check =
+    async () => {
+
+      const current =
+        liveWatchers.get(
+          channelId
+        );
+
+      if (!current) {
+        return;
+      }
+
+      try {
+
+        const live =
+          await getCurrentLive(
+            channelId
+          );
+
+        const wasLive =
+          current.isLive;
+
+        const nowLive =
+          !!live;
+
+        current.isLive =
+          nowLive;
+
+        current.lastLiveId =
+          live?.liveId ||
+          null;
+
+        if (
+          !wasLive &&
+          nowLive
+        ) {
+
+          console.log(
+            "🔴 방송 시작 감지:",
+            channelId,
+            live.liveTitle
+          );
+
+          const fakeReq = {
+            session: {
+              channelId,
+              accessToken
+            }
+          };
+
+          try {
+
+            await startChatCollection(
+              fakeReq
+            );
+
+          } catch (error) {
+
+            console.error(
+              "⚠️ 방송 시작 후 채팅 연결 실패:",
+              error.message
+            );
+          }
+        }
+
+        if (
+          wasLive &&
+          !nowLive
+        ) {
+
+          console.log(
+            "⚫ 방송 종료 감지:",
+            channelId
+          );
+
+          stopChatCollectionByChannel(
+            channelId
+          );
+
+          stopContentSession(
+            channelId
+          );
+        }
+
+      } catch (error) {
+
+        console.error(
+          "⚠️ 방송 감시 오류:",
+          error.message
+        );
+      }
+    };
+
+  await check();
+
+  watcher.timer =
+    setInterval(
+      check,
+      10000
+    );
+
+  return watcher;
+}
+
+
+/* =========================================================
+   방송 감시 중지
+========================================================= */
+
+function stopLiveWatcher(
+  channelId
+) {
+
+  if (!channelId) {
+    return;
+  }
+
+  const watcher =
+    liveWatchers.get(
+      channelId
+    );
+
+  if (!watcher) {
+    return;
+  }
+
+  if (watcher.timer) {
+
+    clearInterval(
+      watcher.timer
+    );
+  }
+
+  liveWatchers.delete(
+    channelId
+  );
+
+  console.log(
+    "📡 방송 감시 종료:",
+    channelId
+  );
+}
+
+
+/* =========================================================
+   OAuth 로그인
 ========================================================= */
 
 app.get(
@@ -1187,6 +2074,7 @@ app.get(
 
       const params =
         new URLSearchParams({
+
           clientId:
             CHZZK_CLIENT_ID,
 
@@ -1194,24 +2082,11 @@ app.get(
             CHZZK_REDIRECT_URI,
 
           state
+
         });
 
       const oauthUrl =
         `${CHZZK_LOGIN_URL}?${params.toString()}`;
-
-      console.log("");
-      console.log(
-        "🔐 치지직 로그인 시작"
-      );
-
-      console.log(
-        "Redirect URI:",
-        CHZZK_REDIRECT_URI
-      );
-
-      console.log(
-        "================================="
-      );
 
       return res.redirect(
         oauthUrl
@@ -1227,9 +2102,7 @@ app.get(
       return res.status(500).send(
         `로그인 시작 실패: ${error.message}`
       );
-
     }
-
   }
 );
 
@@ -1251,34 +2124,6 @@ app.get(
         error_description
       } = req.query;
 
-      console.log("");
-      console.log(
-        "================================="
-      );
-
-      console.log(
-        "🔐 OAuth Callback"
-      );
-
-      console.log(
-        "code:",
-        !!code
-      );
-
-      console.log(
-        "state:",
-        !!state
-      );
-
-      console.log(
-        "session state:",
-        !!req.session?.oauthState
-      );
-
-      console.log(
-        "================================="
-      );
-
       if (error) {
 
         return res.status(400).send(
@@ -1287,44 +2132,35 @@ app.get(
             error
           }`
         );
-
       }
 
       if (!code) {
-
         return res.status(400).send(
           "인증 코드가 없습니다."
         );
-
       }
 
       if (!state) {
-
         return res.status(400).send(
           "OAuth state가 없습니다."
         );
-
       }
 
       const savedState =
         req.session?.oauthState;
 
       if (!savedState) {
-
         return res.status(400).send(
           "OAuth 세션이 없습니다. 다시 로그인해주세요."
         );
-
       }
 
       if (
         savedState !== state
       ) {
-
         return res.status(400).send(
           "OAuth state가 일치하지 않습니다."
         );
-
       }
 
       const tokenBody = {
@@ -1345,10 +2181,6 @@ app.get(
           String(state)
 
       };
-
-      console.log(
-        "🔄 Access Token 요청"
-      );
 
       const tokenResponse =
         await fetch(
@@ -1372,17 +2204,11 @@ app.get(
               JSON.stringify(
                 tokenBody
               )
-
           }
         );
 
       const tokenText =
         await tokenResponse.text();
-
-      console.log(
-        "Token 상태:",
-        tokenResponse.status
-      );
 
       if (
         !tokenResponse.ok
@@ -1391,7 +2217,6 @@ app.get(
         throw new Error(
           `Token 요청 실패: HTTP ${tokenResponse.status} ${tokenText}`
         );
-
       }
 
       let tokenData;
@@ -1408,7 +2233,6 @@ app.get(
         throw new Error(
           "Token 응답 JSON 파싱 실패"
         );
-
       }
 
       const tokenContent =
@@ -1426,16 +2250,10 @@ app.get(
         null;
 
       if (!accessToken) {
-
         throw new Error(
           "Access Token이 응답에 없습니다."
         );
-
       }
-
-      console.log(
-        "✅ Access Token 발급 성공"
-      );
 
       const result =
         await resolveChannelId(
@@ -1448,61 +2266,58 @@ app.get(
       const user =
         result.user;
 
+      if (process.env.DATABASE_URL) {
 
-      /* =====================================================
-         PostgreSQL 로그인 정보 저장
-      ===================================================== */
+        await pool.query(
+          `
+          INSERT INTO chzzk_accounts (
+            channel_id,
+            user_data,
+            access_token,
+            refresh_token,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, NOW())
+          ON CONFLICT (channel_id)
+          DO UPDATE SET
+            user_data = EXCLUDED.user_data,
+            access_token = EXCLUDED.access_token,
+            refresh_token = EXCLUDED.refresh_token,
+            updated_at = NOW()
+          `,
+          [
+            channelId,
+            JSON.stringify(user),
+            accessToken,
+            refreshToken || null
+          ]
+        );
+      }
 
-      await pool.query(
-        `
-        INSERT INTO chzzk_accounts (
-          channel_id,
-          user_data,
-          access_token,
-          refresh_token,
-          updated_at
-        )
-        VALUES ($1, $2, $3, $4, NOW())
-        ON CONFLICT (channel_id)
-        DO UPDATE SET
-          user_data = EXCLUDED.user_data,
-          access_token = EXCLUDED.access_token,
-          refresh_token = EXCLUDED.refresh_token,
-          updated_at = NOW()
-        `,
-        [
+      restoredAccounts.set(
+        channelId,
+        {
           channelId,
-          JSON.stringify(user),
+          user,
           accessToken,
-          refreshToken || null
-        ]
+          refreshToken
+        }
       );
-
-      console.log(
-        "💾 치지직 로그인 정보 PostgreSQL 저장 완료:",
-        channelId
-      );
-
-
-      /* =====================================================
-         Session 저장
-      ===================================================== */
 
       req.session.accessToken =
         accessToken;
-
-      if (refreshToken) {
-
-        req.session.refreshToken =
-          refreshToken;
-
-      }
 
       req.session.channelId =
         channelId;
 
       req.session.user =
         user;
+
+      if (refreshToken) {
+
+        req.session.refreshToken =
+          refreshToken;
+      }
 
       delete req.session.oauthState;
 
@@ -1518,32 +2333,11 @@ app.get(
           channelId,
           []
         );
-
       }
 
-      console.log("");
       console.log(
-        "================================="
-      );
-
-      console.log(
-        "✅ 치지직 로그인 성공"
-      );
-
-      console.log(
-        "채널 ID:",
+        "✅ 치지직 로그인 성공:",
         channelId
-      );
-
-      console.log(
-        "채널명:",
-        user?.channelName ||
-        user?.channel?.channelName ||
-        "알 수 없음"
-      );
-
-      console.log(
-        "================================="
       );
 
       try {
@@ -1558,34 +2352,21 @@ app.get(
           "⚠️ 방송 감시 시작 실패:",
           error.message
         );
-
       }
 
       return res.redirect("/");
 
     } catch (error) {
 
-      console.error("");
       console.error(
-        "================================="
-      );
-
-      console.error(
-        "❌ OAuth 로그인 실패"
-      );
-
-      console.error(error);
-
-      console.error(
-        "================================="
+        "❌ OAuth 로그인 실패:",
+        error
       );
 
       return res.status(500).send(
         `로그인 실패: ${error.message}`
       );
-
     }
-
   }
 );
 
@@ -1616,8 +2397,7 @@ app.get(
 
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
       loggedIn,
 
@@ -1635,7 +2415,6 @@ app.get(
       channelId
 
     });
-
   }
 );
 
@@ -1649,8 +2428,7 @@ app.get(
 
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
       loggedIn,
 
@@ -1663,7 +2441,6 @@ app.get(
         null
 
     });
-
   }
 );
 
@@ -1692,16 +2469,24 @@ app.get(
           channelId
         );
 
+      const content =
+        getContentSession(
+          channelId
+        );
+
+      const connection =
+        chatConnections.get(
+          channelId
+        );
+
       res.json({
 
-        ok:
-          true,
+        ok: true,
 
         channelId,
 
         live:
-          live ||
-          null,
+          live || null,
 
         watching:
           !!watcher,
@@ -1711,7 +2496,16 @@ app.get(
 
         liveId:
           live?.liveId ||
-          null
+          null,
+
+        collecting:
+          !!connection?.collecting,
+
+        contentActive:
+          !!content?.active,
+
+        content:
+          content || null
 
       });
 
@@ -1724,16 +2518,13 @@ app.get(
 
       res.status(500).json({
 
-        ok:
-          false,
+        ok: false,
 
         message:
           error.message
 
       });
-
     }
-
   }
 );
 
@@ -1749,9 +2540,10 @@ app.post(
 
     try {
 
-      await startLiveWatcher(
-        req
-      );
+      const watcher =
+        await startLiveWatcher(
+          req
+        );
 
       const channelId =
         getChannelId(req);
@@ -1761,22 +2553,28 @@ app.post(
           channelId
         );
 
+      const connection =
+        chatConnections.get(
+          channelId
+        );
+
       res.json({
 
-        ok:
-          true,
+        ok: true,
 
         watching:
-          true,
+          !!watcher,
 
         isLive:
           !!live,
 
         live:
-          live ||
-          null,
+          live || null,
 
-        channelId
+        channelId,
+
+        collecting:
+          !!connection?.collecting
 
       });
 
@@ -1789,8 +2587,7 @@ app.post(
 
       res.status(400).json({
 
-        ok:
-          false,
+        ok: false,
 
         error:
           error.message,
@@ -1799,9 +2596,7 @@ app.post(
           error.message
 
       });
-
     }
-
   }
 );
 
@@ -1826,25 +2621,230 @@ app.post(
       req
     );
 
+    stopContentSession(
+      channelId
+    );
+
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
-      watching:
-        false,
+      watching: false,
 
-      collecting:
-        false
+      collecting: false,
+
+      contentActive: false
 
     });
-
   }
 );
 
 
 /* =========================================================
-   채팅 수집 시작
+   후던챗 콘텐츠 시작
+========================================================= */
+
+app.post(
+  "/api/content/start",
+  requireLogin,
+  async (req, res) => {
+
+    try {
+
+      const channelId =
+        getChannelId(req);
+
+      if (!channelId) {
+
+        return res.status(400).json({
+
+          ok: false,
+
+          error:
+            "채널 ID가 없습니다."
+
+        });
+      }
+
+      const live =
+        await getCurrentLive(
+          channelId
+        );
+
+      if (!live) {
+
+        return res.status(400).json({
+
+          ok: false,
+
+          error:
+            "현재 방송 중이 아닙니다.",
+
+          code:
+            "NOT_LIVE"
+
+        });
+      }
+
+      let connection =
+        chatConnections.get(
+          channelId
+        );
+
+      if (
+        !connection?.collecting
+      ) {
+
+        connection =
+          await startChatCollection(
+            req
+          );
+      }
+
+      const content =
+        startContentSession(
+          channelId
+        );
+
+      return res.json({
+
+        ok: true,
+
+        active: true,
+
+        channelId,
+
+        live,
+
+        collecting:
+          !!connection?.collecting,
+
+        content
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "❌ /api/content/start:",
+        error
+      );
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error:
+          error.message,
+
+        message:
+          error.message
+
+      });
+    }
+  }
+);
+
+
+/* =========================================================
+   후던챗 콘텐츠 종료
+========================================================= */
+
+app.post(
+  "/api/content/stop",
+  requireLogin,
+  (req, res) => {
+
+    try {
+
+      const channelId =
+        getChannelId(req);
+
+      const content =
+        stopContentSession(
+          channelId
+        );
+
+      res.json({
+
+        ok: true,
+
+        active: false,
+
+        channelId,
+
+        content:
+          content || null
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "❌ /api/content/stop:",
+        error
+      );
+
+      res.status(400).json({
+
+        ok: false,
+
+        error:
+          error.message,
+
+        message:
+          error.message
+
+      });
+    }
+  }
+);
+
+
+/* =========================================================
+   콘텐츠 상태
+========================================================= */
+
+app.get(
+  "/api/content/status",
+  requireLogin,
+  (req, res) => {
+
+    const channelId =
+      getChannelId(req);
+
+    const content =
+      getContentSession(
+        channelId
+      );
+
+    const connection =
+      chatConnections.get(
+        channelId
+      );
+
+    res.json({
+
+      ok: true,
+
+      active:
+        !!content?.active,
+
+      channelId,
+
+      collecting:
+        !!connection?.collecting,
+
+      content:
+        content || null
+
+    });
+  }
+);
+
+
+/* =========================================================
+   채팅 시작
 ========================================================= */
 
 app.post(
@@ -1861,8 +2861,7 @@ app.post(
 
       res.json({
 
-        ok:
-          true,
+        ok: true,
 
         collecting:
           connection.collecting,
@@ -1881,8 +2880,7 @@ app.post(
 
       res.status(400).json({
 
-        ok:
-          false,
+        ok: false,
 
         error:
           error.message,
@@ -1891,15 +2889,13 @@ app.post(
           error.message
 
       });
-
     }
-
   }
 );
 
 
 /* =========================================================
-   채팅 수집 중지
+   채팅 중지
 ========================================================= */
 
 app.post(
@@ -1913,14 +2909,11 @@ app.post(
 
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
-      collecting:
-        false
+      collecting: false
 
     });
-
   }
 );
 
@@ -1944,8 +2937,7 @@ app.get(
 
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
       channelId,
 
@@ -1957,7 +2949,6 @@ app.get(
         []
 
     });
-
   }
 );
 
@@ -1979,14 +2970,9 @@ app.get(
         channelId
       );
 
-    console.log(
-      `📚 저장된 채팅 조회: ${channelId} / ${messages.length}개`
-    );
-
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
       channelId,
 
@@ -1996,7 +2982,6 @@ app.get(
       messages
 
     });
-
   }
 );
 
@@ -2020,8 +3005,7 @@ app.get(
 
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
       channelId,
 
@@ -2033,7 +3017,6 @@ app.get(
         []
 
     });
-
   }
 );
 
@@ -2057,23 +3040,19 @@ app.delete(
 
     res.json({
 
-      ok:
-        true,
+      ok: true,
 
       channelId,
 
-      messages:
-        []
+      messages: []
 
     });
-
   }
 );
 
+
 /* =========================================================
-   사건 생성
-   - 오늘의 사건
-   - 미제 사건
+   ★ AI 사건 생성
 ========================================================= */
 
 app.post(
@@ -2083,15 +3062,44 @@ app.post(
 
     try {
 
-      const messages =
-        Array.isArray(req.body?.messages)
+      const channelId =
+        getChannelId(req);
+
+      if (
+        !isContentActive(
+          channelId
+        )
+      ) {
+
+        return res.status(400).json({
+
+          ok: false,
+
+          error:
+            "후던챗 콘텐츠가 시작되지 않았습니다.",
+
+          code:
+            "CONTENT_NOT_ACTIVE"
+
+        });
+      }
+
+      let messages =
+        Array.isArray(
+          req.body?.messages
+        )
           ? req.body.messages
           : [];
 
+      if (
+        messages.length < 3
+      ) {
 
-      /* =====================================================
-         모드 / 난이도 / 사건 유형
-      ===================================================== */
+        messages =
+          getChatHistory(
+            channelId
+          );
+      }
 
       const mode =
         String(
@@ -2099,13 +3107,11 @@ app.post(
           "today"
         ).trim();
 
-
       const difficulty =
         String(
           req.body?.difficulty ||
           "normal"
         ).trim();
-
 
       const caseType =
         String(
@@ -2113,19 +3119,16 @@ app.post(
           "random"
         ).trim();
 
-
       const allowedModes = [
         "today",
         "unsolved"
       ];
-
 
       const allowedDifficulties = [
         "easy",
         "normal",
         "hard"
       ];
-
 
       const allowedCaseTypes = [
         "random",
@@ -2139,12 +3142,12 @@ app.post(
         "mystery"
       ];
 
-
       const finalMode =
-        allowedModes.includes(mode)
+        allowedModes.includes(
+          mode
+        )
           ? mode
           : "today";
-
 
       const finalDifficulty =
         allowedDifficulties.includes(
@@ -2153,7 +3156,6 @@ app.post(
           ? difficulty
           : "normal";
 
-
       const finalCaseType =
         allowedCaseTypes.includes(
           caseType
@@ -2161,31 +3163,19 @@ app.post(
           ? caseType
           : "random";
 
-
-      /* =====================================================
-         최소 채팅
-      ===================================================== */
-
       if (
         messages.length < 3
       ) {
 
         return res.status(400).json({
 
-          ok:
-            false,
+          ok: false,
 
           error:
             "사건 생성에는 최소 3개의 채팅이 필요합니다."
 
         });
-
       }
-
-
-      /* =====================================================
-         OpenAI API Key
-      ===================================================== */
 
       const apiKey =
         String(
@@ -2193,29 +3183,20 @@ app.post(
           ""
         ).trim();
 
-
       if (!apiKey) {
 
         return res.status(500).json({
 
-          ok:
-            false,
+          ok: false,
 
           error:
             "OPENAI_API_KEY가 Render 환경변수에 없습니다."
 
         });
-
       }
-
-
-      /* =====================================================
-         채팅 정리
-      ===================================================== */
 
       const sourceMessages =
         messages.slice(-200);
-
 
       const chatLines =
         sourceMessages
@@ -2231,13 +3212,11 @@ app.post(
                   "익명"
                 ).trim();
 
-
               const content =
                 String(
                   message?.content ||
                   ""
                 ).trim();
-
 
               const timestamp =
                 message?.timestamp
@@ -2245,7 +3224,6 @@ app.post(
                       message.timestamp
                     )
                   : "";
-
 
               return {
 
@@ -2259,7 +3237,6 @@ app.post(
                 timestamp
 
               };
-
             }
           )
           .filter(
@@ -2267,23 +3244,19 @@ app.post(
               message.content
           );
 
-
       if (
         chatLines.length < 3
       ) {
 
         return res.status(400).json({
 
-          ok:
-            false,
+          ok: false,
 
           error:
             "분석할 채팅 내용이 없습니다."
 
         });
-
       }
-
 
       const chatText =
         chatLines
@@ -2298,137 +3271,81 @@ app.post(
               return (
                 `채팅 #${message.number} | ${time}${message.nickname}: ${message.content}`
               );
-
             }
           )
           .join("\n");
 
 
       /* =====================================================
-         모드별 설명
+         모드
       ===================================================== */
 
-      let modeRules = "";
-
-
-      if (
+      const modeRules =
         finalMode === "today"
-      ) {
 
-        modeRules = `
+          ? `
+[오늘의 사건]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[🔴 오늘의 사건 모드]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-이번 채팅에서 하나의 사건을 만들어낸다.
-
-방송의 현재 채팅을 바탕으로
-짧고 명확하게 플레이할 수 있는
-하나의 완성된 사건을 만든다.
+이번 채팅을 바탕으로 하나의 완성된 사건을 만든다.
 
 - 사건 하나만 생성한다.
-- 용의자는 난이도에 맞춰 만든다.
-- 실제 채팅에서 여러 단서를 찾아 연결한다.
-- 플레이어가 사건 설명을 보고 추리할 수 있어야 한다.
-- 범인은 반드시 실제 채팅의 증거를 통해 결정한다.
-- 범인을 먼저 정하고 이유를 만드는 방식은 금지한다.
+- 용의자를 난이도에 맞게 만든다.
+- 실제 채팅에서 단서를 찾아야 한다.
+- 범인을 먼저 정하지 않는다.
+- 실제 채팅 증거를 분석한 뒤 범인을 결정한다.
+- 플레이어가 사건을 읽고 추리할 수 있어야 한다.
+`
 
-`;
+          : `
+[미제 사건]
 
-      } else {
+처음부터 범인이 명확하게 보이면 안 된다.
 
-        modeRules = `
+여러 채팅에서 발견되는 증거를 연결해야 한다.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[🧩 미제 사건 모드]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-이번 사건은 즉시 정답을 공개하는 일반 사건이 아니라
-플레이어가 여러 증거를 단계적으로 모아서
-미제 사건을 해결하는 구조로 만든다.
-
-중요:
-
-처음부터 범인이 명확하게 드러나면 안 된다.
-
-사건을 해결하기 위해
-서로 다른 채팅에서 발견되는 여러 증거를
-연결해야 한다.
-
-- 용의자들은 모두 의심스러워야 한다.
-- 각각 다른 의심 이유를 가진다.
-- 증거는 서로 연결되어야 한다.
-- 일부 증거는 미끼여야 한다.
+- 모든 용의자가 의심스러워야 한다.
+- 서로 다른 의심 이유를 가진다.
+- 최소 3개의 증거를 연결한다.
+- 일부 증거는 미끼다.
 - 핵심 증거는 실제 채팅에서 가져온다.
-- 단 하나의 채팅만으로 범인을 확정할 수 없어야 한다.
-- 최소 3개 이상의 증거를 연결하면 범인을 추리할 수 있어야 한다.
-- 시간 순서나 발언의 모순을 적극적으로 활용한다.
-- 최종적으로 한 용의자만 여러 핵심 증거를 동시에 설명할 수 있어야 한다.
-
-미제 사건에서는 특히
-"증거 A → 증거 B → 증거 C → 결정적 단서"
-형태의 연결 구조를 만든다.
-
+- 시간 순서와 발언 모순을 적극적으로 사용한다.
+- 마지막에는 한 용의자만 여러 핵심 증거를 동시에 설명할 수 있어야 한다.
 `;
-
-      }
 
 
       /* =====================================================
-         난이도 규칙
+         난이도
       ===================================================== */
 
-      let difficultyRules = "";
+      const difficultyRules = {
 
-
-      if (
-        finalDifficulty === "easy"
-      ) {
-
-        difficultyRules = `
-
-easy:
+        easy: `
+[쉬움]
 - 용의자 3명
 - 증거 3~4개
-- 핵심 단서는 비교적 명확해야 한다.
-- 실제 채팅 2개 이상을 연결하면 정답을 추리할 수 있어야 한다.
-- 미끼 단서 1개를 포함한다.
+- 핵심 단서는 비교적 명확하다.
+- 미끼 단서 1개
+`,
 
-`;
-
-      } else if (
-        finalDifficulty === "hard"
-      ) {
-
-        difficultyRules = `
-
-hard:
-- 용의자 5명
-- 증거 5~6개
-- 여러 채팅과 시간 순서를 함께 분석한다.
-- 미끼 단서 1~2개를 포함한다.
-- 모든 용의자가 충분히 의심스러워야 한다.
-- 최소 3개 이상의 핵심 단서를 연결한다.
-- 정답 용의자가 처음부터 눈에 띄면 안 된다.
-
-`;
-
-      } else {
-
-        difficultyRules = `
-
-normal:
+        normal: `
+[보통]
 - 용의자 4명
 - 증거 4~5개
 - 여러 채팅을 연결해야 한다.
-- 미끼 단서를 최소 1개 포함한다.
-- 모든 용의자가 서로 다른 이유로 의심스러워야 한다.
-- 단 하나의 채팅만 보고 범인을 확정할 수 없어야 한다.
+- 미끼 단서 최소 1개
+`,
 
-`;
+        hard: `
+[어려움]
+- 용의자 5명
+- 증거 5~6개
+- 시간 순서와 여러 채팅을 함께 분석한다.
+- 미끼 단서 1~2개
+- 최소 3개의 핵심 증거를 연결한다.
+- 범인이 처음부터 눈에 띄면 안 된다.
+`
 
-      }
+      }[finalDifficulty];
 
 
       /* =====================================================
@@ -2436,325 +3353,91 @@ normal:
       ===================================================== */
 
       const caseTypeRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [사건 유형]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-선택된 사건 유형:
+선택된 유형:
 ${finalCaseType}
 
-반드시 선택된 사건 유형을 반영한다.
-
-random이면 실제 채팅에 가장 자연스럽게 어울리는
-사건 유형을 선택한다.
+random이면 실제 채팅에 가장 자연스럽게 맞는
+유형을 선택한다.
 
 가능한 유형:
-
-random
-theft
-missing
-leak
-lie
-betrayal
-threat
-sabotage
-mystery
-
+theft / missing / leak / lie / betrayal /
+threat / sabotage / mystery
 `;
 
 
       /* =====================================================
-         핵심 증거 규칙
+         절대 규칙
       ===================================================== */
 
       const evidenceRules = `
+[절대 규칙]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 절대적인 증거 규칙
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1.
-핵심 증거는 반드시 실제 채팅에서 찾아야 한다.
-
-2.
-채팅에 존재하지 않는 사실을
-핵심 증거로 새롭게 만들어내지 마라.
-
-3.
-단순히 "범인이다", "훔쳤다", "수상하다"라고
-말한 사람을 자동으로 범인으로 선택하지 마라.
-
-4.
-범인은 최소 2개 이상의 서로 독립적인
-실제 채팅 단서로 설명되어야 한다.
-
-5.
-가능하면 서로 다른 채팅의 발언을 연결한다.
-
-6.
-가능하면 시간 순서를 이용한다.
-
-7.
-가능하면 서로 다른 사람이 한 발언을 연결한다.
-
-8.
-한 사람이 일반 시청자가 알기 어려운 정보를
-알고 있는 정황이 있다면 중요한 단서가 될 수 있다.
-단, 그 정보가 실제 채팅에 존재해야 한다.
-
-9.
-범인은 다른 용의자보다 더 많은 핵심 조건을 만족해야 한다.
-
-10.
-다른 용의자들도 실제 채팅에 근거한
-구체적인 의심 이유가 있어야 한다.
-
-11.
-최소 하나의 미끼 단서를 포함한다.
-
-12.
-미끼 단서 역시 반드시 실제 채팅에서 가져온다.
-
-13.
-미끼 단서는 플레이어가 충분히 오해할 수 있어야 한다.
-
-14.
-그러나 다른 증거와 연결하면
-범인이 아니라는 것을 알 수 있어야 한다.
-
-15.
-절대로 채팅에 없는 사건 사실을
-증거처럼 만들어내지 마라.
-
+1. 핵심 증거는 반드시 실제 채팅에서 가져온다.
+2. 채팅에 없는 사실을 증거로 만들지 않는다.
+3. "범인이다", "훔쳤다"라는 말만으로 범인을 결정하지 않는다.
+4. 범인은 최소 2개의 독립적인 실제 채팅 증거로 설명되어야 한다.
+5. 서로 다른 채팅의 발언을 연결한다.
+6. 가능하면 시간 순서를 이용한다.
+7. 가능하면 서로 다른 사람의 발언을 연결한다.
+8. 다른 용의자도 실제 채팅에 근거한 의심 이유가 있어야 한다.
+9. 최소 하나의 미끼 단서를 만든다.
+10. 미끼 단서 역시 실제 채팅에서 가져온다.
+11. 범인을 먼저 정한 후 증거를 끼워 맞추지 않는다.
+12. 실제 채팅에 없는 사건 사실을 핵심 증거처럼 만들지 않는다.
 `;
 
 
       /* =====================================================
-         증거 번호 규칙
+         출력 규칙
       ===================================================== */
 
-      const evidenceNumberRules = `
+      const outputRules = `
+[출력 규칙]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 증거 번호 규칙
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-모든 증거에는 반드시 고유한 번호를 부여한다.
-
-E1
-E2
-E3
-E4
-E5
-E6
-
-증거 번호는 중복하지 않는다.
-
-각 증거에는 반드시 다음 내용을 포함한다.
-
-- 실제 채팅 내용
-- 해당 채팅 번호
-- 관련 닉네임
-- 왜 중요한지
-- 어떤 용의자와 연결되는지
-- 다른 증거와 어떻게 연결되는지
-
-"text"에는 가능하면
-실제 채팅 문장을 그대로 포함한다.
-
-예:
+반드시 JSON 하나만 출력한다.
 
 {
-  "id": "E1",
-  "text": "채팅 #17 | 철수: 아까 그 상자 방송 뒤쪽에 있던데?",
-  "importance": "철수가 일반 시청자가 알기 어려운 상자의 위치를 언급했다.",
-  "relatedSuspects": ["철수"],
-  "linkedEvidence": ["E3"]
+  "brief": "...",
+  "suspects": ["닉네임1", "닉네임2", "닉네임3"],
+  "suspect": "정답 닉네임",
+  "culpritReason": "범인이었던 이유",
+  "deduction": [
+    "1단계...",
+    "2단계...",
+    "3단계...",
+    "4단계..."
+  ],
+  "suspectReasons": {
+    "닉네임1": "...",
+    "닉네임2": "...",
+    "닉네임3": "..."
+  },
+  "finalClue": "...",
+  "exhibits": [
+    {
+      "id": "E1",
+      "text": "실제 채팅",
+      "importance": "...",
+      "relatedSuspects": ["닉네임1"],
+      "linkedEvidence": ["E2"]
+    }
+  ]
 }
 
-`;
+중요:
 
-
-      /* =====================================================
-         범인 결정 규칙
-      ===================================================== */
-
-      const culpritRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 범인 결정 규칙
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-범인을 결정하기 전에 내부적으로 반드시 확인한다.
-
-1. 이 사람이 사건과 어떤 관련이 있는가?
-2. 첫 번째 관련 발언은 무엇인가?
-3. 다른 발언과 모순되는 부분이 있는가?
-4. 다른 용의자의 발언과 연결되는 부분이 있는가?
-5. 시간 순서상 이상한 부분이 있는가?
-6. 이 사람이 알 수 없어야 하는 정보를 알고 있는가?
-7. 다른 용의자보다 더 많은 조건을 만족하는가?
-8. 최소 2개의 실제 채팅 증거가 이 사람을 가리키는가?
-9. 그 증거들이 서로 독립적인가?
-10. 다른 용의자에게는 해당 조합이 존재하지 않는가?
-
-반드시
-"증거 → 용의자 비교 → 단서 연결 → 모순 발견 → 범인 결정"
-순서로 판단한다.
-
-`;
-
-
-      /* =====================================================
-         범인 이유
-      ===================================================== */
-
-      const culpritReasonRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 범인이었던 이유
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-culpritReason은 매우 중요하다.
-
-반드시 실제 증거 번호를 직접 언급한다.
-
-반드시 다음 요소를 포함한다.
-
-- 첫 번째 핵심 증거 번호
-- 두 번째 핵심 증거 번호
-- 가능하면 세 번째 증거 번호
-- 증거 사이의 관계
-- 다른 용의자와의 차이
-- 최종 결론
-
-단순히
-"수상해서 범인이다"
-라고 작성하지 않는다.
-
-`;
-
-      /* =====================================================
-         추리 과정
-      ===================================================== */
-
-      const deductionRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 추리 과정
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-deduction은 플레이어가 사건을 실제로 풀어가는 과정이다.
-
-최소 4단계 이상 작성한다.
-
-각 단계에는 가능하면 증거 번호를 포함한다.
-
-예:
-
-"1단계. E1 때문에 A와 B가 의심된다."
-
-"2단계. E2와 E3을 비교하면 B의 발언에서 시간상 모순이 발견된다."
-
-"3단계. E4를 E1과 연결하면 A가 알고 있었던 정보가 사건과 직접 연결된다."
-
-"4단계. 다른 용의자들은 일부 단서를 설명할 수 있지만
-A만 E1, E3, E4를 동시에 설명할 수 있다."
-
-"5단계. 모든 증거를 종합하면 A가 범인이다."
-
-`;
-
-
-      /* =====================================================
-         용의자별 의심 이유
-      ===================================================== */
-
-      const suspectReasonRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 용의자별 의심 이유
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-모든 용의자에게 실제 채팅에 근거한
-구체적인 의심 이유를 작성한다.
-
-정답 용의자는 다른 용의자보다
-더 많은 핵심 증거가 연결되어야 한다.
-
-`;
-
-      /* =====================================================
-         결정적 단서
-      ===================================================== */
-
-      const finalClueRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 결정적 단서
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-finalClue에는 최종적으로 범인을 확정하게 만드는
-가장 중요한 연결 관계를 작성한다.
-
-반드시 증거 번호를 포함한다.
-
-예:
-
-"E2와 E5를 연결하면 민수는 사건이 발생하기 전에
-일반 시청자가 알 수 없는 정보를 이미 알고 있었다.
-두 증거의 시간 순서까지 고려하면 단순한 우연으로 보기 어렵다."
-
-`;
-
-
-      /* =====================================================
-         허구성
-      ===================================================== */
-
-      const safetyRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[허구성 및 안전 규칙]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-이 사건은 게임을 위한 완전한 허구의 사건이다.
-
-실제 인물을 범죄자로 단정하지 않는다.
-
-채팅 닉네임은 게임 속 허구의 용의자로만 사용한다.
-
-`;
-
-
-      /* =====================================================
-         최종 검증
-      ===================================================== */
-
-      const validationRules = `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-★ 최종 검증
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-JSON을 출력하기 전에 내부적으로 반드시 검증한다.
-
-- 범인이 용의자 목록에 있는가?
-- 용의자 수가 난이도에 맞는가?
-- 증거가 난이도에 맞는가?
-- 모든 증거가 실제 채팅에 존재하는가?
-- 범인에게 최소 2개 이상의 증거가 연결되는가?
-- 증거 사이의 논리적 연결이 있는가?
-- 범인 이유에 증거 번호가 들어가는가?
-- deduction에 증거 번호가 들어가는가?
-- suspectReasons에 증거 근거가 있는가?
-- finalClue에 증거 번호가 들어가는가?
-- 다른 용의자들도 의심스러운가?
-- 미끼 단서가 실제 채팅에서 나온 것인가?
-- 단순히 가장 수상한 사람을 범인으로 고르지 않았는가?
-- 채팅에 없는 사실을 핵심 증거로 만들지 않았는가?
-
+- exhibits의 text는 실제 채팅 문장을 사용한다.
+- 각 증거는 E1, E2, E3 형식이다.
+- 증거 번호는 중복하지 않는다.
+- culpritReason에는 실제 증거 번호를 반드시 포함한다.
+- deduction에는 증거 번호를 반드시 포함한다.
+- finalClue에도 증거 번호를 포함한다.
+- suspectReasons에도 실제 증거 근거를 포함한다.
+- 범인에게 최소 2개의 증거가 연결되어야 한다.
+- 추가 설명을 출력하지 않는다.
+- Markdown을 출력하지 않는다.
 `;
 
 
@@ -2763,18 +3446,26 @@ JSON을 출력하기 전에 내부적으로 반드시 검증한다.
       ===================================================== */
 
       const prompt = `
+너는 "후던챗" 치지직 방송 채팅 추리 게임의
+전문 사건 설계 AI다.
 
-너는 "후던챗"이라는 치지직 방송 채팅 기반
-추리 게임의 전문 사건 설계 AI다.
+방송 채팅을 분석해서 플레이어가 실제로 추리할 수 있는
+허구의 사건을 만들어라.
 
-너의 임무는 방송 채팅을 분석해서
-플레이어가 실제로 추리할 수 있는
-완성도 높은 허구의 사건을 만드는 것이다.
+가장 중요한 원칙:
 
-가장 중요한 원칙은
-범인을 먼저 정하고 이유를 만드는 것이 아니다.
+범인을 먼저 정하고 이유를 만드는 것을 금지한다.
 
-반드시 실제 채팅을 먼저 분석한다.
+반드시
+
+실제 채팅 분석
+→ 증거 발견
+→ 용의자 비교
+→ 단서 연결
+→ 모순 발견
+→ 범인 결정
+
+순서로 판단한다.
 
 ${modeRules}
 
@@ -2784,90 +3475,16 @@ ${caseTypeRules}
 
 ${evidenceRules}
 
-${evidenceNumberRules}
-
-${culpritRules}
-
-${culpritReasonRules}
-
-${deductionRules}
-
-${suspectReasonRules}
-
-${finalClueRules}
-
-${safetyRules}
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [방송 채팅]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${chatText}
 
-
-${validationRules}
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[출력 형식]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-반드시 아래 JSON 형식으로만 출력한다.
-
-{
-  "brief": "플레이어에게 보여줄 사건 설명",
-
-  "suspects": [
-    "닉네임1",
-    "닉네임2",
-    "닉네임3"
-  ],
-
-  "suspect": "정답 닉네임",
-
-  "culpritReason": "E1, E3 등의 실제 증거 번호를 사용하여 범인이었던 이유를 구체적으로 설명",
-
-  "deduction": [
-    "1단계. E1을 통해 ...",
-    "2단계. E2와 E4를 비교하면 ...",
-    "3단계. E3과 E5가 연결되며 ...",
-    "4단계. 모든 증거를 종합하면 ..."
-  ],
-
-  "suspectReasons": {
-    "닉네임1": "E1 때문에 의심되는 이유",
-    "닉네임2": "E2와 E4 때문에 의심되는 이유",
-    "닉네임3": "E3 때문에 의심되는 이유"
-  },
-
-  "finalClue": "E2와 E5를 연결했을 때 발견되는 결정적인 모순",
-
-  "exhibits": [
-    {
-      "id": "E1",
-      "text": "실제 채팅 내용",
-      "importance": "왜 중요한지",
-      "relatedSuspects": [
-        "닉네임1"
-      ],
-      "linkedEvidence": [
-        "E3"
-      ]
-    }
-  ]
-}
-
-추가 설명을 출력하지 않는다.
-Markdown을 출력하지 않는다.
-JSON 앞뒤에 다른 문장을 붙이지 않는다.
-
-반드시 유효한 JSON 하나만 출력한다.
+${outputRules}
 `;
 
 
       /* =====================================================
-         OpenAI API
+         OpenAI
       ===================================================== */
 
       const aiResponse =
@@ -2888,25 +3505,25 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
 
             },
 
-            body: JSON.stringify({
+            body:
+              JSON.stringify({
 
-  model:
-    process.env.OPENAI_MODEL ||
-    "gpt-5-mini",
+                model:
+                  process.env.OPENAI_MODEL ||
+                  "gpt-5-mini",
 
-  response_format: {
-    type: "json_object"
-  },
+                response_format: {
+                  type: "json_object"
+                },
 
-  messages: [
+                messages: [
 
                   {
                     role:
                       "system",
 
                     content:
-                      "너는 후던챗 추리 게임의 사건 생성 AI다. 반드시 실제 채팅을 증거로 사용하고, 증거를 먼저 분석한 뒤 용의자를 비교하여 범인을 결정한다. 범인을 먼저 정하고 이유를 만드는 방식은 절대로 사용하지 않는다. 반드시 유효한 JSON만 반환한다."
-
+                      "실제 채팅을 증거로 사용하는 후던챗 추리 사건 생성 AI다. 범인을 먼저 정하지 말고 증거를 먼저 분석한다. 반드시 유효한 JSON만 출력한다."
                   },
 
                   {
@@ -2915,30 +3532,58 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
 
                     content:
                       prompt
-
                   }
 
                 ]
 
               })
-
           }
         );
-
 
       const aiText =
         await aiResponse.text();
 
+      if (
+        !aiResponse.ok
+      ) {
 
-      console.log(
-        "🔴 OpenAI 실제 응답:",
-        aiText
-      );
+        let detail =
+          aiText;
 
+        try {
 
-      let aiData =
-        null;
+          const errorData =
+            JSON.parse(
+              aiText
+            );
 
+          detail =
+            errorData?.error?.message ||
+            errorData?.message ||
+            aiText;
+
+        } catch {}
+
+        console.error(
+          "❌ OpenAI API 오류:",
+          detail
+        );
+
+        return res.status(
+          aiResponse.status
+        ).json({
+
+          ok: false,
+
+          error:
+            `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
+
+          detail
+
+        });
+      }
+
+      let aiData;
 
       try {
 
@@ -2949,104 +3594,42 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
 
       } catch {
 
-        aiData =
-          null;
-
-      }
-
-
-      if (
-        !aiResponse.ok
-      ) {
-
-        console.error(
-          "❌ OpenAI API 오류:",
-          aiText
+        throw new Error(
+          "OpenAI 응답을 JSON으로 읽을 수 없습니다."
         );
-
-
-        let detail =
-          aiText;
-
-
-        try {
-
-          const errorData =
-            JSON.parse(
-              aiText
-            );
-
-
-          detail =
-            errorData?.error?.message ||
-            errorData?.message ||
-            aiText;
-
-        } catch {}
-
-
-        return res.status(
-          aiResponse.status
-        ).json({
-
-          ok:
-            false,
-
-          error:
-            `AI 사건 생성 실패: HTTP ${aiResponse.status}`,
-
-          detail
-
-        });
-
       }
 
-
-      const content =
+      const aiContent =
         aiData
           ?.choices?.[0]
           ?.message?.content;
 
-
-      if (!content) {
+      if (!aiContent) {
 
         throw new Error(
           "AI 응답 내용이 없습니다."
         );
-
       }
 
-
-      /* =====================================================
-         AI JSON 파싱
-      ===================================================== */
-
       let caseData;
-
 
       try {
 
         caseData =
-          typeof content === "string"
-            ? JSON.parse(content)
-            : content;
+          typeof aiContent === "string"
+            ? JSON.parse(aiContent)
+            : aiContent;
 
       } catch {
 
-        console.error(
-          "❌ AI JSON 파싱 실패:",
-          content
-        );
-
         throw new Error(
-          "AI가 올바른 사건 데이터를 반환하지 않았습니다."
+          "AI가 올바른 사건 JSON을 반환하지 않았습니다."
         );
-
       }
 
 
       /* =====================================================
-         용의자
+         데이터 정리
       ===================================================== */
 
       const suspects =
@@ -3063,121 +3646,17 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
               .filter(Boolean)
           : [];
 
-
-      /* =====================================================
-         증거
-      ===================================================== */
-
-      const exhibits =
-        Array.isArray(
-          caseData.exhibits
-        )
-          ? caseData.exhibits
-              .map(
-                (
-                  item,
-                  index
-                ) => {
-
-                  const id =
-                    String(
-                      item?.id ||
-                      `E${index + 1}`
-                    ).trim();
-
-
-                  const text =
-                    String(
-                      item?.text ||
-                      ""
-                    ).trim();
-
-
-                  const importance =
-                    String(
-                      item?.importance ||
-                      ""
-                    ).trim();
-
-
-                  const relatedSuspects =
-                    Array.isArray(
-                      item?.relatedSuspects
-                    )
-                      ? item.relatedSuspects
-                          .map(
-                            name =>
-                              String(
-                                name || ""
-                              ).trim()
-                          )
-                          .filter(Boolean)
-                      : [];
-
-
-                  const linkedEvidence =
-                    Array.isArray(
-                      item?.linkedEvidence
-                    )
-                      ? item.linkedEvidence
-                          .map(
-                            evidence =>
-                              String(
-                                evidence || ""
-                              ).trim()
-                          )
-                          .filter(Boolean)
-                      : [];
-
-
-                  return {
-
-                    id,
-
-                    text,
-
-                    importance,
-
-                    relatedSuspects,
-
-                    linkedEvidence
-
-                  };
-
-                }
-              )
-              .filter(
-                item =>
-                  item.text
-              )
-          : [];
-
-
-      /* =====================================================
-         정답
-      ===================================================== */
-
       const suspect =
         String(
           caseData.suspect ||
           ""
         ).trim();
 
-
-      /* =====================================================
-         사건 설명
-      ===================================================== */
-
       const brief =
         String(
           caseData.brief ||
-          "채팅 속 단서를 바탕으로 사건이 발생했습니다."
+          ""
         ).trim();
-
-
-      /* =====================================================
-         범인 이유
-      ===================================================== */
 
       const culpritReason =
         String(
@@ -3185,24 +3664,25 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
           ""
         ).trim();
 
-
-      /* =====================================================
-         추리 과정
-      ===================================================== */
-
       const deduction =
         Array.isArray(
           caseData.deduction
         )
           ? caseData.deduction
               .map(
-                step =>
+                item =>
                   String(
-                    step || ""
+                    item || ""
                   ).trim()
               )
               .filter(Boolean)
           : [];
+
+      const finalClue =
+        String(
+          caseData.finalClue ||
+          ""
+        ).trim();
 
 
       /* =====================================================
@@ -3210,7 +3690,6 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
       ===================================================== */
 
       const suspectReasons = {};
-
 
       if (
         caseData.suspectReasons &&
@@ -3222,7 +3701,10 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
       ) {
 
         for (
-          const [name, reason]
+          const [
+            name,
+            reason
+          ]
           of Object.entries(
             caseData.suspectReasons
           )
@@ -3233,12 +3715,10 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
               name || ""
             ).trim();
 
-
           const cleanReason =
             String(
               reason || ""
             ).trim();
-
 
           if (
             cleanName &&
@@ -3249,23 +3729,87 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
               cleanName
             ] =
               cleanReason;
-
           }
-
         }
-
       }
 
 
       /* =====================================================
-         결정적 단서
+         증거
       ===================================================== */
 
-      const finalClue =
-        String(
-          caseData.finalClue ||
-          ""
-        ).trim();
+      const rawExhibits =
+        Array.isArray(
+          caseData.exhibits
+        )
+          ? caseData.exhibits
+          : [];
+
+      const exhibits =
+        rawExhibits
+          .slice(0, 6)
+          .map(
+            (
+              item,
+              index
+            ) => {
+
+              const relatedSuspects =
+                Array.isArray(
+                  item?.relatedSuspects
+                )
+                  ? item.relatedSuspects
+                      .map(
+                        name =>
+                          String(
+                            name || ""
+                          ).trim()
+                      )
+                      .filter(Boolean)
+                  : [];
+
+              const linkedEvidence =
+                Array.isArray(
+                  item?.linkedEvidence
+                )
+                  ? item.linkedEvidence
+                      .map(
+                        id =>
+                          String(
+                            id || ""
+                          ).trim()
+                      )
+                      .filter(Boolean)
+                  : [];
+
+              return {
+
+                id:
+                  `E${index + 1}`,
+
+                text:
+                  String(
+                    item?.text ||
+                    ""
+                  ).trim(),
+
+                importance:
+                  String(
+                    item?.importance ||
+                    ""
+                  ).trim(),
+
+                relatedSuspects,
+
+                linkedEvidence
+
+              };
+            }
+          )
+          .filter(
+            item =>
+              item.text
+          );
 
 
       /* =====================================================
@@ -3277,20 +3821,16 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
       ) {
 
         throw new Error(
-          "AI가 충분한 용의자를 생성하지 못했습니다."
+          "AI가 충분한 용의자를 만들지 못했습니다."
         );
-
       }
-
 
       if (!suspect) {
 
         throw new Error(
-          "AI가 사건의 정답을 지정하지 않았습니다."
+          "AI가 범인을 지정하지 않았습니다."
         );
-
       }
-
 
       if (
         !suspects.includes(
@@ -3299,114 +3839,49 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
       ) {
 
         throw new Error(
-          "사건 정답이 용의자 목록에 없습니다."
+          "범인이 용의자 목록에 없습니다."
         );
-
       }
-
 
       if (
         exhibits.length < 2
       ) {
 
         throw new Error(
-          "AI가 충분한 증거를 생성하지 못했습니다."
+          "AI가 충분한 증거를 만들지 못했습니다."
         );
-
       }
-
 
       if (!culpritReason) {
 
         throw new Error(
-          "AI가 범인이 왜 범인인지 설명하지 않았습니다."
+          "범인 이유가 없습니다."
         );
-
       }
-
 
       if (
         deduction.length < 4
       ) {
 
         throw new Error(
-          "AI가 충분한 추리 과정을 생성하지 못했습니다."
+          "AI가 충분한 추리 과정을 만들지 못했습니다."
         );
-
       }
-
 
       if (!finalClue) {
 
         throw new Error(
-          "AI가 결정적 단서를 생성하지 않았습니다."
+          "결정적 단서가 없습니다."
         );
-
       }
 
 
       /* =====================================================
-         증거 번호 강제 정리
-      ===================================================== */
-
-      const normalizedExhibits =
-        exhibits
-          .slice(0, 6)
-          .map(
-            (
-              exhibit,
-              index
-            ) => ({
-
-              id:
-                `E${index + 1}`,
-
-              text:
-                exhibit.text,
-
-              importance:
-                exhibit.importance ||
-                "이 증거가 사건과 관련된 이유를 분석해야 합니다.",
-
-              relatedSuspects:
-                exhibit.relatedSuspects,
-
-              linkedEvidence:
-                exhibit.linkedEvidence
-
-            })
-          );
-
-
-      /* =====================================================
-         용의자별 이유가 없는 경우
-      ===================================================== */
-
-      for (
-        const name
-        of suspects
-      ) {
-
-        if (
-          !suspectReasons[name]
-        ) {
-
-          suspectReasons[name] =
-            name === suspect
-              ? culpritReason
-              : "실제 채팅 속 정황 때문에 의심받는 용의자입니다.";
-
-        }
-
-      }
-
-
-      /* =====================================================
-         범인 관련 증거 자동 추출
+         범인 관련 증거
       ===================================================== */
 
       const culpritEvidence =
-        normalizedExhibits
+        exhibits
           .filter(
             exhibit =>
               exhibit.relatedSuspects
@@ -3420,50 +3895,144 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
           );
 
 
-      /* =====================================================
-         범인 관련 증거 부족 검사
-      ===================================================== */
-
       if (
         culpritEvidence.length < 2
       ) {
 
-        console.error(
-          "❌ 범인에게 연결된 증거가 부족합니다:",
-          culpritEvidence
-        );
+        const evidenceIds =
+          exhibits.map(
+            exhibit =>
+              exhibit.id
+          );
+
+        const referenced =
+          evidenceIds.filter(
+            id =>
+              culpritReason.includes(
+                id
+              )
+          );
+
+        if (
+          referenced.length >= 2
+        ) {
+
+          for (
+            const id
+            of referenced
+          ) {
+
+            const exhibit =
+              exhibits.find(
+                item =>
+                  item.id === id
+              );
+
+            if (
+              exhibit &&
+              !exhibit.relatedSuspects.includes(
+                suspect
+              )
+            ) {
+
+              exhibit.relatedSuspects.push(
+                suspect
+              );
+            }
+          }
+        }
+      }
+
+
+      const finalCulpritEvidence =
+        exhibits
+          .filter(
+            exhibit =>
+              exhibit.relatedSuspects
+                .includes(
+                  suspect
+                )
+          )
+          .map(
+            exhibit =>
+              exhibit.id
+          );
+
+      if (
+        finalCulpritEvidence.length < 2
+      ) {
 
         throw new Error(
-          "AI가 범인과 연결되는 실제 증거를 2개 이상 만들지 못했습니다. 다시 시도해주세요."
+          "범인과 연결된 실제 증거가 2개 미만입니다. 다시 시도해주세요."
         );
-
       }
 
 
       /* =====================================================
-         미제 사건 추가 검증
+         용의자 이유 자동 보정
+      ===================================================== */
+
+      for (
+        const name
+        of suspects
+      ) {
+
+        if (
+          !suspectReasons[name]
+        ) {
+
+          const related =
+            exhibits
+              .filter(
+                exhibit =>
+                  exhibit.relatedSuspects
+                    .includes(
+                      name
+                    )
+              )
+              .map(
+                exhibit =>
+                  exhibit.id
+              );
+
+          if (
+            related.length
+          ) {
+
+            suspectReasons[name] =
+              `${related.join(", ")} 증거와 관련된 실제 채팅 정황 때문에 의심된다.`;
+
+          } else {
+
+            suspectReasons[name] =
+              "실제 채팅 속 정황 때문에 의심되는 용의자다.";
+          }
+        }
+      }
+
+
+      /* =====================================================
+         미제 사건 검증
       ===================================================== */
 
       if (
         finalMode === "unsolved" &&
-        normalizedExhibits.length < 3
+        exhibits.length < 3
       ) {
 
         throw new Error(
           "미제 사건은 최소 3개의 증거가 필요합니다."
         );
-
       }
 
 
       /* =====================================================
-         최종 결과
+         ★ 최종 결과
       ===================================================== */
 
       const result = {
 
-        ok:
-          true,
+        ok: true,
 
         mode:
           finalMode,
@@ -3477,39 +4046,98 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
         brief,
 
         suspects:
-          suspects.slice(0, 5),
+          suspects.slice(
+            0,
+            5
+          ),
 
         suspect,
 
-        culpritEvidence,
+        culpritEvidence:
+          finalCulpritEvidence,
 
         culpritReason,
 
         deduction:
-          deduction.slice(0, 8),
+          deduction.slice(
+            0,
+            8
+          ),
 
         suspectReasons,
 
         finalClue,
 
-        exhibits:
-          normalizedExhibits
+        exhibits,
 
+        /*
+         * 사건 고유 ID
+         */
+        caseId:
+          crypto
+            .randomUUID(),
+
+        createdAt:
+          Date.now(),
+
+        solved:
+          false
       };
 
 
       /* =====================================================
-         로그
+         ★★★★★ 핵심 수정
+         
+         AI 사건을 현재 콘텐츠 세션에 저장한다.
+         
+         이제 채팅에서
+         /사건
+         /용의자
+         /증거
+         /추리
+         /정답
+         을 사용할 수 있다.
       ===================================================== */
 
-      console.log("");
+      const content =
+        getContentSession(
+          channelId
+        );
 
+      if (!content) {
+
+        throw new Error(
+          "콘텐츠 세션을 찾을 수 없습니다."
+        );
+      }
+
+      content.startedCaseCount =
+        Number(
+          content.startedCaseCount || 0
+        ) + 1;
+
+      content.currentCaseId =
+        result.caseId;
+
+      content.currentCase =
+        result;
+
+      content.solved =
+        false;
+
+
+      console.log("");
       console.log(
         "================================="
       );
 
       console.log(
         "🕵️ 사건 생성 완료"
+      );
+
+      console.log(
+        "사건 ID:",
+        result.caseId
       );
 
       console.log(
@@ -3538,13 +4166,8 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
       );
 
       console.log(
-        "범인 관련 증거:",
+        "범인 증거:",
         result.culpritEvidence
-      );
-
-      console.log(
-        "추리 단계:",
-        result.deduction.length
       );
 
       console.log(
@@ -3563,7 +4186,6 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
         result
       );
 
-
     } catch (error) {
 
       console.error(
@@ -3573,17 +4195,109 @@ JSON 앞뒤에 다른 문장을 붙이지 않는다.
 
       return res.status(500).json({
 
-        ok:
-          false,
+        ok: false,
 
         error:
           error.message ||
           "사건 생성 중 오류가 발생했습니다."
 
       });
+    }
+  }
+);
 
+
+/* =========================================================
+   ★ 현재 사건 API
+========================================================= */
+
+app.get(
+  "/api/case/current",
+  requireLogin,
+  (req, res) => {
+
+    const channelId =
+      getChannelId(req);
+
+    const content =
+      getContentSession(
+        channelId
+      );
+
+    if (
+      !content?.currentCase
+    ) {
+
+      return res.json({
+
+        ok: true,
+
+        exists: false,
+
+        case: null
+
+      });
     }
 
+    return res.json({
+
+      ok: true,
+
+      exists: true,
+
+      case:
+        content.currentCase
+
+    });
+  }
+);
+
+
+/* =========================================================
+   ★ 사건 초기화
+========================================================= */
+
+app.post(
+  "/api/case/reset",
+  requireLogin,
+  (req, res) => {
+
+    const channelId =
+      getChannelId(req);
+
+    const content =
+      getContentSession(
+        channelId
+      );
+
+    if (!content) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error:
+          "후던챗 콘텐츠가 시작되지 않았습니다."
+
+      });
+    }
+
+    content.currentCaseId =
+      null;
+
+    content.currentCase =
+      null;
+
+    content.solved =
+      false;
+
+    res.json({
+
+      ok: true,
+
+      currentCase: null
+
+    });
   }
 );
 
@@ -3598,8 +4312,7 @@ app.use(
 
     res.status(404).json({
 
-      ok:
-        false,
+      ok: false,
 
       error:
         "API를 찾을 수 없습니다.",
@@ -3608,20 +4321,57 @@ app.use(
         "API를 찾을 수 없습니다."
 
     });
-
   }
 );
 
+
 /* =========================================================
-   4/4 — 서버 실행
+   일반 404
 ========================================================= */
 
-app.listen(
-  PORT,
-  "0.0.0.0",
-  async () => {
+app.use(
+  (req, res, next) => {
 
-    console.log("");
+    if (
+      req.path.startsWith(
+        "/api/"
+      )
+    ) {
+
+      return next();
+    }
+
+    const indexPath =
+      path.join(
+        publicPath,
+        "index.html"
+      );
+
+    if (
+      fs.existsSync(
+        indexPath
+      )
+    ) {
+
+      return res.sendFile(
+        indexPath
+      );
+    }
+
+    return res.status(404).send(
+      "WHODUNCHAT 페이지를 찾을 수 없습니다."
+    );
+  }
+);
+
+
+/* =========================================================
+   서버 시작
+========================================================= */
+
+async function startServer() {
+
+  try {
 
     await testDatabase();
 
@@ -3629,56 +4379,77 @@ app.listen(
 
     await restoreSavedAccounts();
 
+  } catch (error) {
 
-    console.log(
-      "================================="
+    console.error(
+      "⚠️ 서버 초기화 오류:",
+      error
     );
-
-    console.log(
-      "🚀 WHODUNCHAT 서버 실행"
-    );
-
-    console.log(
-      "PORT:",
-      PORT
-    );
-
-    console.log(
-      "📡 방송 자동 감시 활성화"
-    );
-
-    console.log(
-      "💬 실시간 채팅 저장 활성화"
-    );
-
-    console.log(
-      "📚 채팅 history API 활성화"
-    );
-
-    console.log(
-      "🕵️ AI 사건 생성 API 활성화"
-    );
-
-    console.log(
-      "🧠 범인 추리 이유 생성 활성화"
-    );
-
-    console.log(
-      "🔴 오늘의 사건 모드 활성화"
-    );
-
-    console.log(
-      "🧩 미제 사건 모드 활성화"
-    );
-
-    console.log(
-      "================================="
-    );
-
-    console.log("");
-
   }
-);
+
+  app.listen(
+    PORT,
+    "0.0.0.0",
+    () => {
+
+      console.log("");
+      console.log(
+        "================================="
+      );
+
+      console.log(
+        "🚀 WHODUNCHAT 서버 실행"
+      );
+
+      console.log(
+        "PORT:",
+        PORT
+      );
+
+      console.log(
+        "📡 방송 자동 감시 활성화"
+      );
+
+      console.log(
+        "💬 실시간 채팅 저장 활성화"
+      );
+
+      console.log(
+        "🤖 치지직 채팅 명령어 활성화"
+      );
+
+      console.log(
+        "📤 후던챗 자동 채팅 답변 활성화"
+      );
+
+      console.log(
+        "📚 채팅 history API 활성화"
+      );
+
+      console.log(
+        "🔎 후던챗 콘텐츠 세션 활성화"
+      );
+
+      console.log(
+        "🕵️ AI 사건 생성 활성화"
+      );
+
+      console.log(
+        "🔴 오늘의 사건 활성화"
+      );
+
+      console.log(
+        "🧩 미제 사건 활성화"
+      );
+
+      console.log(
+        "================================="
+      );
+
+      console.log("");
+    }
+  );
+}
 
 
 /* =========================================================
@@ -3693,7 +4464,6 @@ process.on(
       "❌ uncaughtException:",
       error
     );
-
   }
 );
 
@@ -3706,6 +4476,12 @@ process.on(
       "❌ unhandledRejection:",
       error
     );
-
   }
 );
+
+
+/* =========================================================
+   실행
+========================================================= */
+
+startServer();
